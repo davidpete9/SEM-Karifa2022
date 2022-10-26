@@ -967,6 +967,25 @@
     (pin "2" (uuid ca6e1707-7bd4-478b-b9f4-793d6cfb2389))
   )
 
+  (symbol (lib_id "Device:C") (at 99.06 49.53 0) (unit 1)
+    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (uuid 0e37a0c7-cb97-4f49-9547-9840b441c59a)
+    (property "Reference" "C3" (id 0) (at 102.87 48.2599 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "10uF" (id 1) (at 102.87 50.7999 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric" (id 2) (at 100.0252 53.34 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (id 3) (at 99.06 49.53 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 6363778f-16f1-4035-b06c-1cd6e541de2f))
+    (pin "2" (uuid 26d5f371-05f3-4c9c-851e-a72be507c3af))
+  )
+
   (symbol (lib_id "Device:LED") (at 207.01 29.21 270) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 10137475-c4a3-4943-ab2c-22766523a588)
@@ -1021,6 +1040,22 @@
     (pin "2" (uuid e30140bf-d6ee-4ba7-a502-3eadcccdf0ab))
   )
 
+  (symbol (lib_id "power:GND") (at 99.06 53.34 0) (unit 1)
+    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (uuid 32eec12e-2416-4397-a503-0957861e91c6)
+    (property "Reference" "#PWR0120" (id 0) (at 99.06 59.69 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (id 1) (at 99.06 58.42 0))
+    (property "Footprint" "" (id 2) (at 99.06 53.34 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (id 3) (at 99.06 53.34 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 9a24ae8e-26ba-42f5-84ad-6a6b35cf8d40))
+  )
+
   (symbol (lib_id "Device:LED") (at 187.96 29.21 270) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 3f3995c0-8b8d-478e-a810-f27f488ba1a0)
@@ -1068,7 +1103,7 @@
     (property "Value" "Battery" (id 1) (at 133.35 33.2739 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Footprint" "valami:CR2032_Holder" (id 2) (at 130.175 30.861 90)
+    (property "Footprint" "karifa:CR2032_Holder" (id 2) (at 130.175 30.861 90)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 130.175 30.861 90)
@@ -1524,7 +1559,7 @@
     (uuid de406ba6-034c-4168-9311-f339f51d1cad)
     (property "Reference" "SW1" (id 0) (at 218.44 81.28 0))
     (property "Value" "SW_DPST_x2" (id 1) (at 218.44 83.82 0))
-    (property "Footprint" "valami:SW_Push_K2-1102SP" (id 2) (at 218.44 87.63 0)
+    (property "Footprint" "karifa:SW_Push_K2-1102SP" (id 2) (at 218.44 87.63 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 218.44 87.63 0)
@@ -1571,6 +1606,22 @@
     (pin "2" (uuid 26d3a7f2-282d-4b83-a059-2ae484be6e4c))
   )
 
+  (symbol (lib_id "power:VCC") (at 99.06 45.72 0) (unit 1)
+    (in_bom yes) (on_board yes) (fields_autoplaced)
+    (uuid fccf80e5-f856-491c-ac16-33c399a8d7fe)
+    (property "Reference" "#PWR0118" (id 0) (at 99.06 49.53 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "VCC" (id 1) (at 99.06 40.64 0))
+    (property "Footprint" "" (id 2) (at 99.06 45.72 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (id 3) (at 99.06 45.72 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid 7f505830-8f89-475e-bbc9-20fd9d09aeab))
+  )
+
   (sheet_instances
     (path "/" (page "1"))
   )
@@ -1606,17 +1657,26 @@
     (path "/5c3d72e6-bbd4-4615-9b3a-ed2807fbcc91"
       (reference "#PWR0117") (unit 1) (value "VCC") (footprint "")
     )
+    (path "/fccf80e5-f856-491c-ac16-33c399a8d7fe"
+      (reference "#PWR0118") (unit 1) (value "VCC") (footprint "")
+    )
     (path "/97beb115-9240-4226-b6c5-437c3f064a64"
       (reference "#PWR0119") (unit 1) (value "GND") (footprint "")
     )
+    (path "/32eec12e-2416-4397-a503-0957861e91c6"
+      (reference "#PWR0120") (unit 1) (value "GND") (footprint "")
+    )
     (path "/47f7b25e-acd7-4136-8edf-513cdfcedb3a"
-      (reference "BT1") (unit 1) (value "Battery") (footprint "valami:CR2032_Holder")
+      (reference "BT1") (unit 1) (value "Battery") (footprint "karifa:CR2032_Holder")
     )
     (path "/b5491d66-66e5-4963-a31f-7b8012b56406"
       (reference "C1") (unit 1) (value "100nF") (footprint "Capacitor_SMD:C_0805_2012Metric")
     )
     (path "/8e92fa16-3b73-49b7-976d-e8f7571e5aa6"
       (reference "C2") (unit 1) (value "10uF") (footprint "Capacitor_SMD:C_0805_2012Metric")
+    )
+    (path "/0e37a0c7-cb97-4f49-9547-9840b441c59a"
+      (reference "C3") (unit 1) (value "10uF") (footprint "Capacitor_SMD:C_0805_2012Metric")
     )
     (path "/31b04caa-c4c2-4173-b7a3-7bede720a3d8"
       (reference "D2") (unit 1) (value "LED") (footprint "LED_SMD:LED_0805_2012Metric")
@@ -1676,7 +1736,7 @@
       (reference "R9") (unit 1) (value "1k") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/de406ba6-034c-4168-9311-f339f51d1cad"
-      (reference "SW1") (unit 1) (value "SW_DPST_x2") (footprint "valami:SW_Push_K2-1102SP")
+      (reference "SW1") (unit 1) (value "SW_DPST_x2") (footprint "karifa:SW_Push_K2-1102SP")
     )
     (path "/700bc6a9-3e36-494a-9775-ec73585b69b4"
       (reference "U1") (unit 1) (value "STC8G1K08-SOP16") (footprint "Package_SO:STC_SOP-16_3.9x9.9mm_P1.27mm")
