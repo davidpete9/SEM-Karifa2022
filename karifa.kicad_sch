@@ -1801,7 +1801,7 @@
     (uuid 17a5f37d-34c8-4ccd-b3cd-7b199e521964)
     (property "Reference" "Q3" (id 0) (at 44.45 62.23 90))
     (property "Value" "AO3401A" (id 1) (at 44.45 64.77 90))
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 42.545 67.31 0)
+    (property "Footprint" "sajat:SOT-23" (id 2) (at 42.545 67.31 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3401A.pdf" (id 3) (at 44.45 72.39 0)
@@ -2280,7 +2280,7 @@
     (uuid 8ad2b27f-56c4-4507-95fe-ff61e05d0e5d)
     (property "Reference" "Q2" (id 0) (at 44.45 38.1 90))
     (property "Value" "AO3401A" (id 1) (at 44.45 40.64 90))
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 42.545 43.18 0)
+    (property "Footprint" "sajat:SOT-23" (id 2) (at 42.545 43.18 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3401A.pdf" (id 3) (at 44.45 48.26 0)
@@ -2576,7 +2576,7 @@
     (uuid de406ba6-034c-4168-9311-f339f51d1cad)
     (property "Reference" "SW1" (id 0) (at 218.44 81.28 0))
     (property "Value" "SW_DPST_x2" (id 1) (at 218.44 83.82 0))
-    (property "Footprint" "karifa:SW_Push_K2-1102SP" (id 2) (at 218.44 87.63 0)
+    (property "Footprint" "sajat:SW_Push_K2-1102SP" (id 2) (at 218.44 87.63 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (id 3) (at 218.44 87.63 0)
@@ -2643,7 +2643,7 @@
     (uuid fc90615f-14ab-4e28-a4dd-78e4c9052225)
     (property "Reference" "Q1" (id 0) (at 41.91 87.63 90))
     (property "Value" "AO3401A" (id 1) (at 41.91 90.17 90))
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 40.005 92.71 0)
+    (property "Footprint" "sajat:SOT-23" (id 2) (at 40.005 92.71 0)
       (effects (font (size 1.27 1.27) italic) (justify left) hide)
     )
     (property "Datasheet" "http://www.aosmd.com/pdfs/datasheet/AO3401A.pdf" (id 3) (at 41.91 97.79 0)
@@ -2799,13 +2799,13 @@
       (reference "L3") (unit 1) (value "L") (footprint "Inductor_SMD:L_1008_2520Metric")
     )
     (path "/fc90615f-14ab-4e28-a4dd-78e4c9052225"
-      (reference "Q1") (unit 1) (value "AO3401A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q1") (unit 1) (value "AO3401A") (footprint "sajat:SOT-23")
     )
     (path "/8ad2b27f-56c4-4507-95fe-ff61e05d0e5d"
-      (reference "Q2") (unit 1) (value "AO3401A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q2") (unit 1) (value "AO3401A") (footprint "sajat:SOT-23")
     )
     (path "/17a5f37d-34c8-4ccd-b3cd-7b199e521964"
-      (reference "Q3") (unit 1) (value "AO3401A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q3") (unit 1) (value "AO3401A") (footprint "sajat:SOT-23")
     )
     (path "/23172657-7dcf-40a6-be57-7a2d6a0ef71d"
       (reference "R1") (unit 1) (value "100k") (footprint "Resistor_SMD:R_0603_1608Metric")
@@ -2835,7 +2835,7 @@
       (reference "R9") (unit 1) (value "1k") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/de406ba6-034c-4168-9311-f339f51d1cad"
-      (reference "SW1") (unit 1) (value "SW_DPST_x2") (footprint "karifa:SW_Push_K2-1102SP")
+      (reference "SW1") (unit 1) (value "SW_DPST_x2") (footprint "sajat:SW_Push_K2-1102SP")
     )
     (path "/0b72e181-2db7-4b27-9232-922c0199bb96"
       (reference "T1") (unit 1) (value "Tab") (footprint "kikit:Tab")
