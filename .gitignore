@@ -13,7 +13,6 @@ _autosave-*
 *-save.pro
 *-save.kicad_pcb
 fp-info-cache
-karifa-backups/
 # Netlist files (exported from Eeschema)
 *.net
 
@@ -24,3 +23,6 @@ karifa-backups/
 # Exported BOM files
 *.xml
 *.csv
+
+/karifa-backups
+/panel-backups
