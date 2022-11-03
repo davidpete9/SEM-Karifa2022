@@ -15,7 +15,7 @@
 
 
 /***************************************< Definitions >**************************************/
-#define LEDS_NUM               (10u)  //!< Number of LEDs driven by this driver
+#define LEDS_NUM               (12u)  //!< Number of LEDs driven by this driver
 
 
 /***************************************< Types >**************************************/
