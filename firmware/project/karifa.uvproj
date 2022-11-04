@@ -446,6 +446,16 @@
               <FileType>5</FileType>
               <FilePath>..\src\util.h</FilePath>
             </File>
+            <File>
+              <FileName>rgbled.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\rgbled.c</FilePath>
+            </File>
+            <File>
+              <FileName>rgbled.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\src\rgbled.h</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
