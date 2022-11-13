@@ -22,7 +22,6 @@
 //! \brief Structure for persistent data
 typedef PACKED struct
 {
-  U8  au8PartnerUID[ UID_LENGTH ];  //!< Unique ID of the paired device
   U8  u8AnimationIndex;             //!< Index of the last played animation
   U16 u16CRC;                       //!< CRC for protecting structure against bit errors
 } S_PERSIST;

@@ -16,6 +16,7 @@
 // Own includes
 #include "types.h"
 #include "led.h"
+#include "rgbled.h"
 #include "util.h"
 #include "animation.h"
 #include "persist.h"
@@ -28,8 +29,9 @@
 //! \brief Instruction used by the animation state machine
 typedef struct
 {
-  U16 u16TimingMs;                   //!< How long the machine should stay in this state
-  U8  au8LEDBrightness[ LEDS_NUM ];  //!< Brightness of each LEDs
+  U16 u16TimingMs;                               //!< How long the machine should stay in this state
+  U8  au8LEDBrightness[ LEDS_NUM ];              //!< Brightness of each LED
+  U8  au8RGBLEDBrightness[ NUM_RGBLED_COLORS ];  //!< Brightness of each color
 } S_ANIMATION_INSTRUCTION;
 
 //! \brief Animation structure
@@ -41,6 +43,41 @@ typedef struct
 
 
 /***************************************< Constants >**************************************/
+//! \brief Retro animation
+CODE const S_ANIMATION_INSTRUCTION gasRetroVersion[ 8u ] = 
+{ 
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, {15,  0,  0} },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0} },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0} },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0} },
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, {15,  0,  0} },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0} },
+  /*
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, {15,  0,  0} },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15, 15,  0, 15,  0}, { 0,  0,  0} },
+  {133u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, { 0,  0,  0} },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15, 15,  0, 15,  0}, { 0,  0,  0} },
+  {133u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, { 0,  0,  0} },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0, 15,  0,  0,  0}, { 0,  0,  0} },
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, {15,  0,  0} },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0, 15,  0,  0,  0}, { 0,  0,  0} },
+  */
+};
+
+
+
+
+
+//! \brief All blackness, reached right before going to power down mode
+CODE const S_ANIMATION_INSTRUCTION gasBlackness[ 1u ] =
+{
+  {0xFFFFu, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+};
+
+
+//--------------------------------------------------< Old animations from valentine's heart project
 //! \brief Heartbeat animation
 CODE const S_ANIMATION_INSTRUCTION gasHeartBeat[ 4u ] = 
 { 
@@ -314,6 +351,9 @@ CODE const S_ANIMATION_INSTRUCTION gasPairing[ 2u ] =
 //! \brief Table of animations
 CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] = 
 {
+  {sizeof(gasRetroVersion)/sizeof(S_ANIMATION_INSTRUCTION),        gasRetroVersion},
+  
+  //-----------------------------------< Old animations from previous project
 //  {sizeof(gasHeartBeat)/sizeof(S_ANIMATION_INSTRUCTION),           gasHeartBeat},
   {sizeof(gasHeartbeatFading)/sizeof(S_ANIMATION_INSTRUCTION),     gasHeartbeatFading},
   {sizeof(gasShootingStar)/sizeof(S_ANIMATION_INSTRUCTION),        gasShootingStar},
@@ -329,9 +369,11 @@ CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] =
   {sizeof(gasGenericFlasher)/sizeof(S_ANIMATION_INSTRUCTION),      gasGenericFlasher},
   {sizeof(gasPingPong)/sizeof(S_ANIMATION_INSTRUCTION),            gasPingPong},
   {sizeof(gasYingYangBounce)/sizeof(S_ANIMATION_INSTRUCTION),      gasYingYangBounce},
-  {sizeof(gasRace)/sizeof(S_ANIMATION_INSTRUCTION),                gasRace},
-  // Pairing animation
-  {sizeof(gasPairing)/sizeof(S_ANIMATION_INSTRUCTION),             gasPairing}
+  //{sizeof(gasRace)/sizeof(S_ANIMATION_INSTRUCTION),                gasRace},
+  //-----------------------------------< Old animations end
+
+  // Darkness, right before power off
+  {sizeof(gasBlackness)/sizeof(S_ANIMATION_INSTRUCTION),           gasBlackness}
 };
 
 
@@ -409,6 +451,7 @@ void Animation_Cycle( void )
     
     // Update LED brightnesses based on the synchronized timer
     memcpy( gau8LEDBrightness, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness, LEDS_NUM );
+    memcpy( gau8RGBLEDs, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness, NUM_RGBLED_COLORS );
     
     // Store the timestamp
     gu16LastCall = u16TimeNow;

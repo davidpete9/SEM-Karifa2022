@@ -25,12 +25,6 @@
 /***************************************< Definitions >**************************************/
 #define BUTTON_PIN     (P32)  //!< Button for selecting animation and turning it off and on
 
-// Handshake types for radio
-#define RADIO_HANDSHAKE_PAIRING_REQUEST         (0x00u)  //!< (Broadcast) Seeking partners
-#define RADIO_HANDSHAKE_PAIRING_ACCEPTED        (0x01u)  //!< (Broadcast) Pairing request accepted
-#define RADIO_HANDSHAKE_ANIMATION_CHANGE_REQ    (0xF0u)  //!< (Unicast) Animation change request
-#define RADIO_HANDSHAKE_ANIMATION_CHANGE_ACK    (0xF1u)  //!< (Unicast) Animation change accepted
-
 
 /***************************************< Types >**************************************/
 
@@ -83,7 +77,8 @@ static void Timer0Init( void )
 //-----------------------------------------------------------------------------
 void main( void )
 {
-  U8  u8CurrentAnimation = 0u;
+  U8   u8CurrentAnimation = 0u;
+  BOOL bPressedLong = FALSE;
 
   // Initialize modules
   Util_Init();
@@ -108,7 +103,15 @@ void main( void )
   IPH &= ~(1u<<1u);  // PT0H = 0
   ET0 = 1;  // Enable Timer0 interrupts
   EA  = 1;  // Global interrupt enable
-  
+
+  // Wait if the button is pressed on power up
+  // This is necessary, to avoid changing animation on power on
+  while( 0 == BUTTON_PIN )
+  {
+    gu16ButtonPressTimer = Util_GetTimerMs() + 100u;  // 1 ms wait
+    while( gu16ButtonPressTimer > Util_GetTimerMs() );
+  }
+
   // Main loop
   while( TRUE )
   {
@@ -143,16 +146,16 @@ void main( void )
           }
           Animation_Set( u8CurrentAnimation );
           // Save it
-//          Persist_Save();
+          Persist_Save();
         }
         else if( Util_GetTimerMs() == gu16ButtonPressTimer )  // the long press timer has just went off
         {
           geButtonState = BUTTON_LONGPRESS;
           // Actions for long button press
-//          bitPairing = 1;
-//          bitGotPartnerID = 0;
-          // Set pairing animation
-//          Animation_Set( NUM_ANIMATIONS-1u );  // last animation
+          // Signal that it will be shut down by setting a completely black animation
+          u8CurrentAnimation = NUM_ANIMATIONS-1u;
+          Animation_Set( u8CurrentAnimation );
+          bPressedLong = TRUE;
         }
         break;
       
@@ -171,6 +174,27 @@ void main( void )
           {
             gu16ButtonPressTimer = Util_GetTimerMs() + 2000u;  // 2 sec long press
             geButtonState = BUTTON_UNPRESSED;
+            
+            if( TRUE == bPressedLong )
+            {
+              // Go to power-down sleep
+              EA = 0;   // Disable all interrupts
+              TR0 = 0;  // Stop Timer 0
+              ET0 = 0;  // Disable Timer 0 interrupt
+              EX0 = 1;  // Enable INT0 interrupt
+              P1M0 = 0x00u;  // All pins must be bidirectional
+              P1M1 = 0x00u;
+              P3M0 = 0x00u;
+              P3M1 = 0x00u;
+              P5M0 = 0x00u;
+              P5M0 = 0x00u;
+              P1 = 0xFFu;  // Set all pins to 1
+              P3 = 0xFFu;
+              P5 = 0x3Fu;
+              EA = 1;  // Enable all interrupts
+              PCON |= 0x02u;  // PD bit
+              bPressedLong = FALSE;  // This should not be reached...
+            }
           }
           else  // still pushed
           {
@@ -191,6 +215,21 @@ void main( void )
     // Sleep until next interrupt
     PCON |= 0x01u;  // IDL bit
   }
+}
+
+//----------------------------------------------------------------------------
+//! \brief  INT0 interrupt handler
+//! \param  -
+//! \return -
+//! \note   Should be placed at 0x0003 (==IT vector 0).
+//-----------------------------------------------------------------------------
+#pragma vector=0x0003
+IT_PRE void INT0_ISR( void ) ITVECTOR0
+{
+  // Normally, only after waking up from power down mode should lead to here
+  // Perform software reset
+  IAP_CONTR |= 0x20u;
+  while( 1 );  // This should not be reached
 }
 
 //----------------------------------------------------------------------------

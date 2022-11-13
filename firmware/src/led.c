@@ -22,12 +22,12 @@
 // Pin definitions
 #define MPX1            (P10)  //!< Pin of MPX1 multiplexer pin
 #define MPX2            (P11)  //!< Pin of MPX2 multiplexer pin
-#define LED0            (P33)  //!< Pin of LED0 common pin
+#define LED0            (P17)  //!< Pin of LED0 common pin
 #define LED1            (P34)  //!< Pin of LED1 common pin
 #define LED2            (P35)  //!< Pin of LED2 common pin
-#define LED3            (P36)  //!< Pin of LED3 common pin
-#define LED4            (P37)  //!< Pin of LED4 common pin
-#define LED5            (P16)  //!< Pin of LED4 common pin
+#define LED3            (P37)  //!< Pin of LED3 common pin
+#define LED4            (P36)  //!< Pin of LED4 common pin
+#define LED5            (P33)  //!< Pin of LED4 common pin
 
 
 /***************************************< Types >**************************************/
@@ -116,7 +116,7 @@ void LED_Interrupt( void )
   //NOTE: unfortunately SFRs cannot be put in an array, so this cannot be implented as a for cycle
   if( gbitSide )  // left side
   {
-    if( gau8LEDBrightness[ 0u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 0u ] > gu8PWMCounter )  // D12
     {
       LED0 = 1;
     }
@@ -124,7 +124,7 @@ void LED_Interrupt( void )
     {
       LED0 = 0;
     }
-    if( gau8LEDBrightness[ 1u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 1u ] > gu8PWMCounter )  // D4
     {
       LED1 = 1;
     }
@@ -132,7 +132,7 @@ void LED_Interrupt( void )
     {
       LED1 = 0;
     }
-    if( gau8LEDBrightness[ 2u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 2u ] > gu8PWMCounter )  // D6
     {
       LED2 = 1;
     }
@@ -140,7 +140,7 @@ void LED_Interrupt( void )
     {
       LED2 = 0;
     }
-    if( gau8LEDBrightness[ 3u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 3u ] > gu8PWMCounter )  // D10
     {
       LED3 = 1;
     }
@@ -148,7 +148,7 @@ void LED_Interrupt( void )
     {
       LED3 = 0;
     }
-    if( gau8LEDBrightness[ 4u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 4u ] > gu8PWMCounter )  // D8
     {
       LED4 = 1;
     }
@@ -156,7 +156,7 @@ void LED_Interrupt( void )
     {
       LED4 = 0;
     }
-    if( gau8LEDBrightness[ 5u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 5u ] > gu8PWMCounter )  // D2
     {
       LED5 = 1;
     }
@@ -167,15 +167,15 @@ void LED_Interrupt( void )
   }
   else  // right side
   {
-    if( gau8LEDBrightness[ 6u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 6u ] > gu8PWMCounter )  // D3
     {
-      LED3 = 1;
+      LED5 = 1;
     }
     else
     {
-      LED3 = 0;
+      LED5 = 0;
     }
-    if( gau8LEDBrightness[ 7u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 7u ] > gu8PWMCounter )  // D9
     {
       LED4 = 1;
     }
@@ -183,7 +183,15 @@ void LED_Interrupt( void )
     {
       LED4 = 0;
     }
-    if( gau8LEDBrightness[ 8u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 8u ] > gu8PWMCounter )  // D11
+    {
+      LED3 = 1;
+    }
+    else
+    {
+      LED3 = 0;
+    }
+    if( gau8LEDBrightness[ 9u ] > gu8PWMCounter )  // D7
     {
       LED2 = 1;
     }
@@ -191,7 +199,7 @@ void LED_Interrupt( void )
     {
       LED2 = 0;
     }
-    if( gau8LEDBrightness[ 9u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 10u ] > gu8PWMCounter )  // D5
     {
       LED1 = 1;
     }
@@ -199,21 +207,13 @@ void LED_Interrupt( void )
     {
       LED1 = 0;
     }
-    if( gau8LEDBrightness[ 10u ] > gu8PWMCounter )  // D??
+    if( gau8LEDBrightness[ 11u ] > gu8PWMCounter )  // D13
     {
       LED0 = 1;
     }
     else
     {
       LED0 = 0;
-    }
-    if( gau8LEDBrightness[ 11u ] > gu8PWMCounter )  // D??
-    {
-      LED5 = 1;
-    }
-    else
-    {
-      LED5 = 0;
     }
   }
 }
