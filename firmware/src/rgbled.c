@@ -20,9 +20,9 @@
 
 /***************************************< Definitions >**************************************/
 #define COLOR_LEVELS   (16u)  //!< Number of brightness levels per color
-#define PIN_R          (P16)  //!< GPIO pin for red LED
-#define PIN_G          (P54)  //!< GPIO pin for green LED
-#define PIN_B          (P55)  //!< GPIO pin for blue LED
+#define PIN_R          (P54)  //!< GPIO pin for red LED
+#define PIN_G          (P55)  //!< GPIO pin for green LED
+#define PIN_B          (P16)  //!< GPIO pin for blue LED
 
 
 /***************************************< Types >**************************************/
@@ -53,10 +53,10 @@ static void BluePulseDelay( void );
 //-----------------------------------------------------------------------------
 static void RedPulseDelay( void )
 {
-  // Wait for 10 usec
+  // Wait for 3 usec
 	unsigned char i;
 
-	i = 78;
+	i = 22;
 	while (--i);
 }
 
@@ -69,10 +69,10 @@ static void RedPulseDelay( void )
 //-----------------------------------------------------------------------------
 static void GreenPulseDelay( void )
 {
-  // Wait for 20 usec
+  // Wait for 1 usec
 	unsigned char i;
 
-	i = 158;
+	i = 22;
 	while (--i);
 }
 
@@ -85,10 +85,10 @@ static void GreenPulseDelay( void )
 //-----------------------------------------------------------------------------
 static void BluePulseDelay( void )
 {
-  // Wait for 20 usec
+  // Wait for 1 usec
 	unsigned char i;
 
-	i = 158;
+	i = 22;
 	while (--i);
 }
 
@@ -137,21 +137,21 @@ void RGBLED_Interrupt( void )
   
   if( gau8RGBLEDs[ 0 ] > u8Cnt )  // Red
   {
-    PIN_R = 1;
-    RedPulseDelay();
     PIN_R = 0;
+    RedPulseDelay();
+    PIN_R = 1;
   }
   if( gau8RGBLEDs[ 1 ] > u8Cnt )  // Green
   {
-    PIN_G = 1;
-    GreenPulseDelay();
     PIN_G = 0;
+    GreenPulseDelay();
+    PIN_G = 1;
   }
   if( gau8RGBLEDs[ 2 ] > u8Cnt )  // Blue
   {
-    PIN_B = 1;
-    BluePulseDelay();
     PIN_B = 0;
+    BluePulseDelay();
+    PIN_B = 1;
   }
   u8Cnt++;
   if( COLOR_LEVELS <= u8Cnt )

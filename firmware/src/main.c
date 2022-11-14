@@ -83,6 +83,7 @@ void main( void )
   // Initialize modules
   Util_Init();
   LED_Init();
+  RGBLED_Init();
   Animation_Init();
   Persist_Init();
 
@@ -182,15 +183,15 @@ void main( void )
               TR0 = 0;  // Stop Timer 0
               ET0 = 0;  // Disable Timer 0 interrupt
               EX0 = 1;  // Enable INT0 interrupt
+              P1 = 0xFFu;  // Set all pins to 1
+              P3 = 0xFFu;
+              P5 = 0x3Fu;
               P1M0 = 0x00u;  // All pins must be bidirectional
               P1M1 = 0x00u;
               P3M0 = 0x00u;
               P3M1 = 0x00u;
               P5M0 = 0x00u;
               P5M0 = 0x00u;
-              P1 = 0xFFu;  // Set all pins to 1
-              P3 = 0xFFu;
-              P5 = 0x3Fu;
               EA = 1;  // Enable all interrupts
               PCON |= 0x02u;  // PD bit
               bPressedLong = FALSE;  // This should not be reached...
@@ -243,6 +244,7 @@ IT_PRE void timer0_isr( void ) ITVECTOR1
 {
   Util_Interrupt();  // Housekeeping, e.g. ms delay timer
   LED_Interrupt();  // Soft-PWM LED driver
+  RGBLED_Interrupt();  // RGB LED driver
   // End of interrupt
   TF0 = 0;  // clear Timer0 IT flag
 }
