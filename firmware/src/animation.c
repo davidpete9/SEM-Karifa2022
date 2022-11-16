@@ -9,6 +9,16 @@
 *
 **********************************************************************************************************/
 
+/*----------------------------------------------------------------------------------------
+How it works
+============
+Animations are implemented on a virtual machine. This machine has opcodes that operate on
+the LED brightness state variables. Each animation program runs in a loop. Instructions have
+the following format:
+  [ LED brightness array -- signed integer ] [ Opcode ] [ Opcode specific operand ]
+
+----------------------------------------------------------------------------------------*/
+
 /***************************************< Includes >**************************************/
 // Standard C libraries
 #include <string.h>
@@ -23,15 +33,30 @@
 
 
 /***************************************< Definitions >**************************************/
+#define RIGHT_LEDS_START    (6u)  //!< Index of the first LED on the right side of the board
 
 
 /***************************************< Types >**************************************/
+//! \brief Opcode bits used in animation virtual machine
+typedef enum
+{
+  LOAD      = 0x00u,  //!< Loads the LED brightness array to the PWM driver
+  ADD       = 0x01u,  //!< Adds the LED brightness array elements to the current brightness level; if overflows, it sets to zero
+  RSHIFT    = 0x02u,  //!< Shifts all the current LED brightness levels clockwise
+  LSHIFT    = 0x04u,  //!< Shifts all the current LED brightness levels anticlockwise
+  USHIFT    = 0x08u,  //!< Shifts all the current LED brightness levels upwards
+  DSHIFT    = 0x10u,  //!< Shifts all the current LED brightness levels downwards
+  REPEAT    = 0x20u   //!< Do the instruction and repeat by (operand)-times
+} E_ANIMATION_OPCODE;
+
 //! \brief Instruction used by the animation state machine
 typedef struct
 {
   U16 u16TimingMs;                               //!< How long the machine should stay in this state
   U8  au8LEDBrightness[ LEDS_NUM ];              //!< Brightness of each LED
   U8  au8RGBLEDBrightness[ NUM_RGBLED_COLORS ];  //!< Brightness of each color
+  U8  u8AnimationOpcode;                         //!< Opcode (E_ANIMATION_OPCODE)
+  U8  u8AnimationOperand;                        //!< Opcode-specific operand
 } S_ANIMATION_INSTRUCTION;
 
 //! \brief Animation structure
@@ -45,68 +70,36 @@ typedef struct
 /***************************************< Constants >**************************************/
 //! \brief Retro animation
 CODE const S_ANIMATION_INSTRUCTION gasRetroVersion[ 8u ] = 
-  { //FIXME: the right and left side are mirrored
-  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, {15,  0,  0} },
-  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0} },
-  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0} },
-  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0} },
-  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, {15,  0,  0} },
-  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0} },
+  {
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, {15,  0,  0}, LOAD, 0u },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0}, LOAD, 0u },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0}, LOAD, 0u },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, {15,  0,  0}, LOAD, 0u },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0}, LOAD, 0u },
 };
 
 //! \brief "Sine" wave flasher animation
-CODE const S_ANIMATION_INSTRUCTION gasSoftFlashing[ 30u ] = 
+CODE const S_ANIMATION_INSTRUCTION gasSoftFlashing[ 4u ] = 
 {
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  { 50u, { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}, { 1,  0,  0} },
-  { 50u, { 2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2}, { 2,  0,  0} },
-  { 50u, { 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3}, { 3,  0,  0} },
-  { 50u, { 4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4}, { 4,  0,  0} },
-  { 50u, { 5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5}, { 5,  0,  0} },
-  { 50u, { 6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6}, { 6,  0,  0} },
-  { 50u, { 7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7}, { 7,  0,  0} },
-  { 50u, { 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8}, { 8,  0,  0} },
-  { 50u, { 9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9}, { 9,  0,  0} },
-  { 50u, {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}, {10,  0,  0} },
-  { 50u, {11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11}, {11,  0,  0} },
-  { 50u, {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}, {12,  0,  0} },
-  { 50u, {13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13}, {13,  0,  0} },
-  { 50u, {14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14}, {14,  0,  0} },
-  {100u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, {15,  0,  0} }, 
-  { 50u, {14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14}, {14,  0,  0} },
-  { 50u, {13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13}, {13,  0,  0} },
-  { 50u, {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12}, {12,  0,  0} },
-  { 50u, {11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11}, {11,  0,  0} },
-  { 50u, {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}, {10,  0,  0} },
-  { 50u, { 9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  9}, { 9,  0,  0} },
-  { 50u, { 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8}, { 8,  0,  0} },
-  { 50u, { 7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7}, { 7,  0,  0} },
-  { 50u, { 6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6}, { 6,  0,  0} },
-  { 50u, { 5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5}, { 5,  0,  0} },
-  { 50u, { 4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4}, { 4,  0,  0} },
-  { 50u, { 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3}, { 3,  0,  0} },
-  { 50u, { 2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2}, { 2,  0,  0} },
-  { 50u, { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}, { 1,  0,  0} },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,          0u },
+  { 50u, { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}, { 1,  0,  0}, ADD | REPEAT, 14u },
+  {100u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, {15,  0,  0}, LOAD,          0u }, 
+  { 50u, {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, {-1,  0,  0}, ADD | REPEAT, 14u },
 };
 
 //! \brief Shooting star anticlockwise animation
-CODE const S_ANIMATION_INSTRUCTION gasShootingStar[ 13u ] = 
+CODE const S_ANIMATION_INSTRUCTION gasShootingStar[ 7u ] = 
 { 
-  {100u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5, 15}, { 0,  0,  0} }, 
-  {100u, {10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
-  {100u, { 5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  5, 10, 15,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  5, 10, 15,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  0,  5, 10,  0,  0,  0,  0,  0,  0}, {15,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  5, 15,  0,  0,  0,  0,  0}, {10,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0, 10, 15,  0,  0,  0,  0}, { 5,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0,  5, 10, 15,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  5, 10, 15,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  5, 10, 15,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0} },
+  {100u, { 5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, RSHIFT | REPEAT, 2u },
+  {100u, { 0,  0,  0,  0,  5, 10,  0,  0,  0,  0,  0,  0}, {15,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  5, 15,  0,  0,  0,  0,  0}, {10,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0, 10, 15,  0,  0,  0,  0}, { 5,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  5, 10, 15,  0,  0,  0}, { 0,  0,  0}, LOAD,                  0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, RSHIFT | REPEAT, 4u },
 };
 
 //! \brief Star launch animation
@@ -155,25 +148,22 @@ CODE const S_ANIMATION_INSTRUCTION gasStarLaunch[ 39u ] =
 //! \brief Generic flasher animation
 CODE const S_ANIMATION_INSTRUCTION gasGenericFlasher[ 2u ] = 
 {
-  {500u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, { 7,  7,  7} }, 
-  {500u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+  {500u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, { 7,  7,  7}, LOAD, 0u }, 
+  {500u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
 };
 
 //! \brief KITT animation
-CODE const S_ANIMATION_INSTRUCTION gasKITT[ 22u ] = 
+CODE const S_ANIMATION_INSTRUCTION gasKITT[ 19u ] = 
 {
-  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
-  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0} },
-  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0} },
-  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0} },
-  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0} },
-  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 5,  0,  0} },
-  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, {10,  0,  0} },
-  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, {15,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, {10,  0,  0} },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 5,  0,  0} },
+  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,                  0u },
+  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,                  0u },
+  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD, 0u },
+  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD, 0u },
+  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD, 0u },
+  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD, 0u },
+  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD, 0u },
+  {100u, { 0,  0,  0,  0,  0,-15,-15,  0,  0,  0,  0,  0}, { 5,  0,  0}, ADD | USHIFT | REPEAT, 2u },
+  {100u, { 0,  0,  0,  0,  0,-15,-15,  0,  0,  0,  0,  0}, {-5,  0,  0}, ADD | USHIFT | REPEAT, 2u },
   {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, { 0,  0,  0} },
   {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, { 0,  0,  0} },
   {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, { 0,  0,  0} },
@@ -184,191 +174,55 @@ CODE const S_ANIMATION_INSTRUCTION gasKITT[ 22u ] =
   {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0} },
   {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0} },
   {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
+  
+  /*
+  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 5,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, {10,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, {15,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, {10,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 5,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD,  0u },
+  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD,  0u },
+  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,  0u },
+  */
 };
 
 //! \brief Disco animation
 CODE const S_ANIMATION_INSTRUCTION gasDisco[ 12u ] = 
 {
-  {40u, {  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15}, {15,  0, 15} },
-  {40u, {  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7}, { 7,  0,  7} },
-  {40u, {  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4}, { 4,  0,  4} },
-  {40u, {  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2}, { 2,  0,  2} },
-  {40u, {  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1}, { 1,  0,  1} },
-  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {40u, { 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0}, { 0, 15,  0} },
-  {40u, {  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0}, { 0,  7,  0} },
-  {40u, {  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0}, { 0,  4,  0} },
-  {40u, {  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0}, { 0,  2,  0} },
-  {40u, {  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0}, { 0,  1,  0} },
-  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+  {40u, {  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15}, {15,  0, 15}, LOAD, 0u },
+  {40u, {  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7}, { 7,  0,  7}, LOAD, 0u },
+  {40u, {  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4}, { 4,  0,  4}, LOAD, 0u },
+  {40u, {  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2}, { 2,  0,  2}, LOAD, 0u },
+  {40u, {  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1}, { 1,  0,  1}, LOAD, 0u },
+  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {40u, { 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0}, { 0, 15,  0}, LOAD, 0u },
+  {40u, {  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0}, { 0,  7,  0}, LOAD, 0u },
+  {40u, {  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0}, { 0,  4,  0}, LOAD, 0u },
+  {40u, {  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0}, { 0,  2,  0}, LOAD, 0u },
+  {40u, {  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0}, { 0,  1,  0}, LOAD, 0u },
+  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
 };
 
 
 //! \brief All blackness, reached right before going to power down mode
 CODE const S_ANIMATION_INSTRUCTION gasBlackness[ 1u ] =
 {
-  {0xFFFFu, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-};
-
-
-//--------------------------------------------------< Old animations from valentine's heart project
-//! \brief Shooting stars chasing animation
-CODE const S_ANIMATION_INSTRUCTION gasShootingStarChasing[ 10u ] = 
-{
-  {100u, {15,  0,  0,  5, 10, 15,  0,  0,  5, 10} }, 
-  {100u, {10, 15,  0,  0,  5, 10, 15,  0,  0,  5} },
-  {100u, { 5, 10, 15,  0,  0,  5, 10, 15,  0,  0} },
-  {100u, { 0,  5, 10, 15,  0,  0,  5, 10, 15,  0} },
-  {100u, { 0,  0,  5, 10, 15,  0,  0,  5, 10, 15} },
-  {100u, {15,  0,  0,  5, 10, 15,  0,  0,  5, 10} },
-  {100u, {10, 15,  0,  0,  5, 10, 15,  0,  0,  5} },
-  {100u, { 5, 10, 15,  0,  0,  5, 10, 15,  0,  0} },
-  {100u, { 0,  5, 10, 15,  0,  0,  5, 10, 15,  0} },
-  {100u, { 0,  0,  5, 10, 15,  0,  0,  5, 10, 15} },
-};
-
-//! \brief Shooting stars both direction animation
-CODE const S_ANIMATION_INSTRUCTION gasShootingStarBoth[ 10u ] = 
-{
-  {100u, {15,  0,  0, 15, 10,  5,  0,  0,  5, 10} }, 
-  {100u, {10, 15, 15, 10,  5,  0,  0,  0,  0,  5} },
-  {100u, { 5, 15, 15,  5,  0,  0,  0,  0,  0,  0} },
-  {100u, {15, 10, 10, 15,  0,  0,  0,  0,  0,  0} },
-  {100u, {10,  5,  5, 10, 15,  0,  0,  0,  0, 15} },
-  {100u, { 5,  0,  0,  5, 10, 15,  0,  0, 15, 10} },
-  {100u, { 0,  0,  0,  0,  5, 10, 15, 15, 10,  5} },
-  {100u, { 0,  0,  0,  0,  0,  5, 15, 15,  5,  0} },
-  {100u, { 0,  0,  0,  0,  0, 15, 10, 10, 15,  0} },
-  {100u, { 0,  0,  0,  0, 15, 10,  5,  5, 10, 15} },
-};
-
-//! \brief Chase 2 fading animation
-CODE const S_ANIMATION_INSTRUCTION gasChase2Fading[ 5u ] = 
-{
-  {150u, {  0,  0,  2,  6, 15,  0,  0,  2,  6, 15} },
-  {150u, { 15,  0,  0,  2,  6, 15,  0,  0,  2,  6} },
-  {150u, {  6, 15,  0,  0,  2,  6, 15,  0,  0,  2} },
-  {150u, {  2,  6, 15,  0,  0,  2,  6, 15,  0,  0} },
-  {150u, {  0,  2,  6, 15,  0,  0,  2,  6, 15,  0} },
-};
-
-//! \brief Heartbeat fading animation
-CODE const S_ANIMATION_INSTRUCTION gasHeartbeatFading[ 8u ] = 
-{
-  {150u, { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15} },
-  {100u, {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {100u, { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15} },
-  {33u, {  7,  7,  7,  7,  7,  7,  7,  7,  7,  7} },
-  {33u, {  4,  4,  4,  4,  4,  4,  4,  4,  4,  4} },
-  {33u, {  2,  2,  2,  2,  2,  2,  2,  2,  2,  2} },
-  {33u, {  1,  1,  1,  1,  1,  1,  1,  1,  1,  1} },
-  {300u, {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-};
-
-//! \brief Level Up animation
-CODE const S_ANIMATION_INSTRUCTION gasLevelUp[ 12u ] = 
-{
-  {160u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {140u, {  0,  0,  0, 15,  0, 15,  0,  0,  0,  0} },
-  {120u, {  0,  0, 15,  0,  0,  0, 15,  0,  0,  0} },
-  {100u, {  0, 15,  0,  0,  0,  0,  0, 15,  0, 15} },
-  {80u, { 15,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-  {20u, { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15} },
-  {80u, {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {20u, { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15} },
-  {80u, {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {20u, { 15, 15, 15, 15, 15, 15, 15, 15, 15, 15} },
-  {200u, {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-};
-
-//! \brief Ping-pong animation
-CODE const S_ANIMATION_INSTRUCTION gasPingPong[ 20u ] = 
-{
-  {60u, {  0,  0,  0,  0,  0,  0,  0,  0,  0, 15} },
-  {60u, {  0,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0,  0, 15,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0, 15,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0, 15,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0, 15,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0, 15,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0, 15,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, { 15,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0,  0,  0,  0, 15} },
-  {60u, { 15,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0, 15,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0, 15,  0,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0, 15,  0,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0, 15,  0,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0, 15,  0,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0,  0, 15,  0,  0} },
-  {60u, {  0,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-};
-
-//! \brief Race animation
-CODE const S_ANIMATION_INSTRUCTION gasRace[ 30u ] = 
-{
-  {250u, {  0,  0,  0,  0,  0,  0,  0,  0,  0, 15} },
-  {250u, {  0,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-  {250u, {  0,  0,  0,  0,  0,  0,  0, 15,  0,  0} },
-  {250u, {  0,  0,  0,  0,  0,  0, 15,  0,  0,  0} },
-  {250u, {  0,  0,  0,  0,  0, 15,  0,  0,  0,  0} },
-  {250u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {250u, {  0,  0,  0, 15,  0,  0,  0,  0,  0,  0} },
-  {250u, {  0,  0, 15,  0,  0,  0,  0,  0,  0,  0} },
-  {250u, {  0, 15,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {250u, { 15,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {120u, {  0,  0,  0,  0,  0,  0,  0,  0,  0, 15} },
-  {120u, {  0,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-  {120u, {  0,  0,  0,  0,  0,  0,  0, 15,  0,  0} },
-  {120u, {  0,  0,  0,  0,  0,  0, 15,  0,  0,  0} },
-  {120u, {  0,  0,  0,  0,  0, 15,  0,  0,  0,  0} },
-  {120u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {120u, {  0,  0,  0, 15,  0,  0,  0,  0,  0,  0} },
-  {120u, {  0,  0, 15,  0,  0,  0,  0,  0,  0,  0} },
-  {120u, {  0, 15,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {120u, { 15,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {70u, {  0,  0,  0,  0,  0,  0,  0,  0,  0, 15} },
-  {70u, {  0,  0,  0,  0,  0,  0,  0,  0, 15,  0} },
-  {70u, {  0,  0,  0,  0,  0,  0,  0, 15,  0,  0} },
-  {70u, {  0,  0,  0,  0,  0,  0, 15,  0,  0,  0} },
-  {70u, {  0,  0,  0,  0,  0, 15,  0,  0,  0,  0} },
-  {70u, {  0,  0,  0,  0, 15,  0,  0,  0,  0,  0} },
-  {70u, {  0,  0,  0, 15,  0,  0,  0,  0,  0,  0} },
-  {70u, {  0,  0, 15,  0,  0,  0,  0,  0,  0,  0} },
-  {70u, {  0, 15,  0,  0,  0,  0,  0,  0,  0,  0} },
-  {70u, { 15,  0,  0,  0,  0,  0,  0,  0,  0,  0} },
-};
-
-//! \brief Stepping 3 section animation
-CODE const S_ANIMATION_INSTRUCTION gasStepping3Section[ 3u ] = 
-{
-  {200u, {  0,  0, 15,  0,  0, 15,  0,  0, 15,  0} },
-  {200u, {  0, 15,  0,  0, 15,  0,  0, 15,  0,  0} },
-  {200u, { 15,  0,  0, 15,  0,  0, 15,  0,  0, 15} },
-};
-
-//! \brief Ying-yang bounce animation
-CODE const S_ANIMATION_INSTRUCTION gasYingYangBounce[ 10u ] = 
-{
-  {100u, {  0,  0,  2,  5, 15,  0,  0,  2,  5, 15} },
-  {100u, { 15,  0,  0,  2,  5, 15,  0,  0,  2,  5} },
-  {100u, {  5, 15,  0,  0,  2,  5, 15,  0,  0,  2} },
-  {100u, {  2,  5, 15,  0,  0,  2,  5, 15,  0,  0} },
-  {100u, {  0,  2,  5, 15,  0,  0,  2,  5, 15,  0} },
-  {100u, {  0,  0,  2,  5, 15,  0,  0,  2,  5, 15} },
-  {100u, {  0,  2,  5, 15,  0,  0,  2,  5, 15,  0} },
-  {100u, {  2,  5, 15,  0,  0,  2,  5, 15,  0,  0} },
-  {100u, {  5, 15,  0,  0,  2,  5, 15,  0,  0,  2} },
-  {100u, { 15,  0,  0,  2,  5, 15,  0,  0,  2,  5} },
-};
-
-//! \brief Pairing animation (fast flashing)
-CODE const S_ANIMATION_INSTRUCTION gasPairing[ 2u ] = 
-{
-  { 50u, {15,  0, 15,  0, 15,  0, 15,  0, 15,  0} }, 
-  { 50u, { 0, 15,  0, 15,  0, 15,  0, 15,  0, 15} },
+  {0xFFFFu, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
 };
 
 //! \brief Table of animations
@@ -381,20 +235,7 @@ CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] =
   {sizeof(gasGenericFlasher)/sizeof(S_ANIMATION_INSTRUCTION),      gasGenericFlasher},
   {sizeof(gasKITT)/sizeof(S_ANIMATION_INSTRUCTION),                gasKITT},
   {sizeof(gasDisco)/sizeof(S_ANIMATION_INSTRUCTION),               gasDisco},
-  
-  //-----------------------------------< Old animations from previous project
-//  {sizeof(gasHeartbeatFading)/sizeof(S_ANIMATION_INSTRUCTION),     gasHeartbeatFading},
-  {sizeof(gasChase2Fading)/sizeof(S_ANIMATION_INSTRUCTION),        gasChase2Fading},
-//  {sizeof(gasShootingStarChasing)/sizeof(S_ANIMATION_INSTRUCTION), gasShootingStarChasing},
-  {sizeof(gasLevelUp)/sizeof(S_ANIMATION_INSTRUCTION),             gasLevelUp},
-  {sizeof(gasShootingStarBoth)/sizeof(S_ANIMATION_INSTRUCTION),    gasShootingStarBoth},
-  {sizeof(gasStepping3Section)/sizeof(S_ANIMATION_INSTRUCTION),    gasStepping3Section},
-  {sizeof(gasPingPong)/sizeof(S_ANIMATION_INSTRUCTION),            gasPingPong},
-  {sizeof(gasYingYangBounce)/sizeof(S_ANIMATION_INSTRUCTION),      gasYingYangBounce},
-  //{sizeof(gasRace)/sizeof(S_ANIMATION_INSTRUCTION),                gasRace},
-  //-----------------------------------< Old animations end
-
-  // Darkness, right before power off
+  // Last animation, don't change its location
   {sizeof(gasBlackness)/sizeof(S_ANIMATION_INSTRUCTION),           gasBlackness}
 };
 
@@ -404,6 +245,9 @@ CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] =
 //! \note  Depending on the animation, its maximum value can be anything
 IDATA U16 gu16SynchronizedTimer;
 IDATA U16 gu16LastCall;       //!< The last time the main cycle was called
+// Local variables
+static IDATA U8 u8LastState = 0xFFu;          //!< Previously executed instruction index
+static IDATA U8 u8RepetitionCounter = 0u;  //!< Instruction repetition counter
 
 
 /***************************************< Static function definitions >**************************************/
@@ -438,6 +282,8 @@ void Animation_Cycle( void )
   U8  u8AnimationState;
   U16 u16StateTimer = 0u;
   U16 u16TimeNow = Util_GetTimerMs();
+  U8  u8Index;
+  U8  u8Temp;
   
   // Check if time has elapsed since last call
   if( u16TimeNow != gu16LastCall )
@@ -470,11 +316,110 @@ void Animation_Cycle( void )
       gu16SynchronizedTimer = 0;
       ENABLE_IT;
     }
-    
-    // Update LED brightnesses based on the synchronized timer
-    memcpy( gau8LEDBrightness, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness, LEDS_NUM );
-    memcpy( gau8RGBLEDs, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness, NUM_RGBLED_COLORS );
-    
+    if( u8LastState != u8AnimationState )  // next instruction
+    {
+      // Just a load instruction, nothing more
+      if( LOAD == gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+      {
+        memcpy( gau8LEDBrightness, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness, LEDS_NUM );
+        memcpy( gau8RGBLEDs, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness, NUM_RGBLED_COLORS );
+        u8LastState = u8AnimationState;
+      }
+      else  // Other opcodes -- IMPORTANT: the order of operations are fixed!
+      {
+        // Add operation
+        if( ADD & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+          for( u8Index = 0u; u8Index < LEDS_NUM; u8Index++ )
+          {
+            gau8LEDBrightness[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            if( gau8LEDBrightness[ u8Index ] > 15u )  // overflow/underflow happened
+            {
+              gau8LEDBrightness[ u8Index ] = 0u;
+            }
+          }
+          for( u8Index = 0u; u8Index < NUM_RGBLED_COLORS; u8Index++ )
+          {
+            gau8RGBLEDs[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness[ u8Index ];
+            if( gau8RGBLEDs[ u8Index ] > 15u )  // overflow/underflow happened
+            {
+              gau8RGBLEDs[ u8Index ] = 0u;
+            }
+          }
+        }
+        // Right shift operation
+        if( RSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+          u8Temp = gau8LEDBrightness[ LEDS_NUM - 1u ];
+          for( u8Index = LEDS_NUM - 1u; u8Index > 0u; u8Index-- )
+          {
+            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index - 1u ];
+          }
+          gau8LEDBrightness[ 0u ] = u8Temp;
+        }
+        // Left shift operation
+        if( LSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+          u8Temp = gau8LEDBrightness[ 0u ];
+          for( u8Index = 0u; u8Index < (LEDS_NUM - 1u); u8Index++ )
+          {
+            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index + 1u ];
+          }
+          gau8LEDBrightness[ LEDS_NUM - 1u ] = u8Temp;
+        }
+        // Upward shift operation
+        if( USHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+          // Left side
+          u8Temp = gau8LEDBrightness[ RIGHT_LEDS_START - 1u ];
+          for( u8Index = RIGHT_LEDS_START - 1u; u8Index > 0u; u8Index-- )
+          {
+            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index - 1u ];
+          }
+          gau8LEDBrightness[ 0u ] = u8Temp;
+          // Right side
+          u8Temp = gau8LEDBrightness[ RIGHT_LEDS_START ];
+          for( u8Index = RIGHT_LEDS_START; u8Index < (LEDS_NUM - 1u); u8Index++ )
+          {
+            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index + 1u ];
+          }
+          gau8LEDBrightness[ LEDS_NUM - 1u ] = u8Temp;
+        }
+        // Downward shift operation
+        if( DSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+        #warning TODO
+        }
+        // Repeat instruction
+        if( REPEAT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        {
+          // If we're here the first time
+          if( 0u == u8RepetitionCounter )
+          {
+            u8RepetitionCounter = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOperand;
+            // Step back in time
+            gu16SynchronizedTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u16TimingMs;
+          }
+          else  // We're already repeating...
+          {
+            u8RepetitionCounter--;
+            if( 0u != u8RepetitionCounter )
+            {
+              // Step back in time
+              gu16SynchronizedTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u16TimingMs;
+            }
+            else  // No more repeating
+            {
+             u8LastState = u8AnimationState;
+            }
+          }
+        }
+        else  // if there's no repeat opcode
+        {
+          u8LastState = u8AnimationState;  // save that this operation is finished
+        }
+      }
+    }
     // Store the timestamp
     gu16LastCall = u16TimeNow;
   }
@@ -495,6 +440,8 @@ void Animation_Set( U8 u8AnimationIndex )
     DISABLE_IT;
     gu16SynchronizedTimer = 0u;
     ENABLE_IT;
+    u8LastState = 0xFFu;
+    u8RepetitionCounter = 0u;
   }
 }
 

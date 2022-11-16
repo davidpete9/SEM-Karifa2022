@@ -18,6 +18,7 @@
 #include "types.h"
 #include "util.h"
 #include "led.h"
+#include "rgbled.h"
 #include "animation.h"
 #include "persist.h"
 

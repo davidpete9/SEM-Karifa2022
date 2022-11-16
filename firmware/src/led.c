@@ -109,8 +109,8 @@ void LED_Interrupt( void )
     gu8PWMCounter = 0;
     gbitSide ^= 1;
     // Set multiplexer pins
-    MPX1 = ~gbitSide;
-    MPX2 = gbitSide;
+    MPX1 = gbitSide;
+    MPX2 = ~gbitSide;
   }
   
   //NOTE: unfortunately SFRs cannot be put in an array, so this cannot be implented as a for cycle
