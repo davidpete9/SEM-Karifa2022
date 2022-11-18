@@ -177,7 +177,7 @@
           </Flash1>
           <bUseTDR>0</bUseTDR>
           <Flash2></Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -314,11 +314,11 @@
             <uAregs>0</uAregs>
             <UseInterruptVector>1</UseInterruptVector>
             <Fuzzy>3</Fuzzy>
-            <Optimize>8</Optimize>
+            <Optimize>9</Optimize>
             <WarningLevel>2</WarningLevel>
             <SizeSpeed>1</SizeSpeed>
             <ObjectExtend>1</ObjectExtend>
-            <ACallAJmp>0</ACallAJmp>
+            <ACallAJmp>1</ACallAJmp>
             <InterruptVectorAddress>0</InterruptVectorAddress>
             <VariousControls>
               <MiscControls></MiscControls>
@@ -455,6 +455,16 @@
               <FileName>rgbled.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\src\rgbled.h</FilePath>
+            </File>
+            <File>
+              <FileName>batterylevel.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\batterylevel.c</FilePath>
+            </File>
+            <File>
+              <FileName>batterylevel.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\src\batterylevel.h</FilePath>
             </File>
           </Files>
         </Group>

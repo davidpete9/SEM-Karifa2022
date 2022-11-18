@@ -21,6 +21,7 @@
 #include "rgbled.h"
 #include "animation.h"
 #include "persist.h"
+#include "batterylevel.h"
 
 
 /***************************************< Definitions >**************************************/
@@ -87,6 +88,7 @@ void main( void )
   RGBLED_Init();
   Animation_Init();
   Persist_Init();
+  BatteryLevel_Init();
 
   // Pushbutton @ P3.2 --> bidirectional with pullup
   // NOTE: this might not the best in terms of power consumption, but the input mode with pullup was not enough
@@ -114,6 +116,9 @@ void main( void )
     while( gu16ButtonPressTimer > Util_GetTimerMs() );
   }
 
+  // Measure and show battery level
+  BatteryLevel_Show();
+    
   // Main loop
   while( TRUE )
   {
