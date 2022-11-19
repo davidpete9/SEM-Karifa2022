@@ -107,7 +107,7 @@ void BatteryLevel_Show( void )
   // As we have 6 + 1 LED levels, we divide this range to 7 levels
   // A floating-point based implementation would be: u8ChargeLevel = round( 7.0f*( f32BatteryVoltage - 2.0f )/0.8f );
   // After simplification, the formula for charge level would be: u8ChargeLevel = round( ( 10662.4f / u16MeasuredLevel ) - 17.5f )
-  if( u16MeasuredLevel < 610u )  // If the voltage is below 2.0V
+  if( u16MeasuredLevel >= 610u )  // If the voltage is below 2.0V
   {
     u8ChargeLevel = 0u;
   }
