@@ -308,13 +308,13 @@
             </OnChipMemories>
           </Target51Misc>
           <C51>
-            <RegisterColoring>0</RegisterColoring>
+            <RegisterColoring>1</RegisterColoring>
             <VariablesInOrder>0</VariablesInOrder>
             <IntegerPromotion>1</IntegerPromotion>
             <uAregs>0</uAregs>
             <UseInterruptVector>1</UseInterruptVector>
             <Fuzzy>3</Fuzzy>
-            <Optimize>9</Optimize>
+            <Optimize>12</Optimize>
             <WarningLevel>2</WarningLevel>
             <SizeSpeed>1</SizeSpeed>
             <ObjectExtend>1</ObjectExtend>

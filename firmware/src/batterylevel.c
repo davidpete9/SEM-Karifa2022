@@ -10,9 +10,6 @@
 **********************************************************************************************************/
 
 /***************************************< Includes >**************************************/
-#include <math.h>
-#include <string.h>
-
 // Own includes
 #include "stc8g.h"
 #include "types.h"
@@ -81,9 +78,15 @@ void BatteryLevel_Show( void )
   U16 u16MeasuredLevel;
   U8  u8ChargeLevel;
   U8  u8Index;
-  float f32BatteryVoltage;
-  // Set all LED brightness to maximum, to ensure a significant current draw
-  memset( gau8LEDBrightness, 15, LEDS_NUM );
+  
+  // Startup animation
+  // After it, all LED brightness will be set to maximum, to ensure a significant current draw during measurement
+  for( u8Index = 0u; u8Index < LEDS_NUM/2u; u8Index++ )
+  {
+    gau8LEDBrightness[ u8Index ] = 15u;
+    gau8LEDBrightness[ LEDS_NUM - u8Index - 1u ] = 15u;
+    Delay( 100u );
+  }
   gau8RGBLEDs[ 0u ] = 15u;
   Delay( 100u );
   // Measure battery voltage
@@ -95,11 +98,24 @@ void BatteryLevel_Show( void )
   // Disable ADC to save power
   ADC_CONTR = 0x00u;
   // Calculate battery voltage
-  f32BatteryVoltage = 1.19f/( (float)u16MeasuredLevel/1024.0f );
+  // The voltage can be calculated using this formula: BatteryVoltage = 1.19/( u16MeasuredLevel / ADC_MAX_VALUE )
+  // So the floating-point implementation would be: f32BatteryVoltage = 1.19f/( (float)u16MeasuredLevel/1024.0f );
+  // But since floating point calculations are expensive in terms of program memory(!), here we use fixed-point arithmetic...
+  // Charge level formula:
   // As CR2032 batteries quickly drop to 2.8V under load, we assume that 2.8V means full charge
   // And since at 2.0V our LEDs can be barely seen, at 2.0V we assume that our battery is completely depleted
   // As we have 6 + 1 LED levels, we divide this range to 7 levels
-  u8ChargeLevel = floor( 7.0f*( f32BatteryVoltage - 2.0f )/0.8f + 0.5f );
+  // A floating-point based implementation would be: u8ChargeLevel = round( 7.0f*( f32BatteryVoltage - 2.0f )/0.8f );
+  // After simplification, the formula for charge level would be: u8ChargeLevel = round( ( 10662.4f / u16MeasuredLevel ) - 17.5f )
+  if( u16MeasuredLevel < 610u )  // If the voltage is below 2.0V
+  {
+    u8ChargeLevel = 0u;
+  }
+  else
+  {
+    u8ChargeLevel = ( ( 42650u / u16MeasuredLevel ) - 70u )>>2u;
+  }
+  // Display the charge level on the LEDs
   for( u8Index = 0u; u8Index < LEDS_NUM/2u; u8Index++ )
   {
     if( u8ChargeLevel >= u8Index )
@@ -121,7 +137,8 @@ void BatteryLevel_Show( void )
   {
     gau8RGBLEDs[ 0u ] = 0u;
   }
-  Delay( 1000u );
+  // Wait, so the user can read the battery charge level
+  Delay( 2000u );
 }
 
 /***************************************< End of file >**************************************/
