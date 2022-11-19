@@ -15,7 +15,7 @@
 
 
 /***************************************< Definitions >**************************************/
-#define NUM_ANIMATIONS        (8u)  //!< Number of animations implemented
+#define NUM_ANIMATIONS        (10u)  //!< Number of animations implemented
 
 
 /***************************************< Types >**************************************/
@@ -25,7 +25,6 @@
 
 
 /***************************************< Global variables >**************************************/
-extern IDATA U16 gu16SynchronizedTimer;
 
 
 /***************************************< Public functions >**************************************/

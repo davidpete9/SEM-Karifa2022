@@ -44,216 +44,308 @@ typedef enum
   ADD       = 0x01u,  //!< Adds the LED brightness array elements to the current brightness level; if overflows, it sets to zero
   RSHIFT    = 0x02u,  //!< Shifts all the current LED brightness levels clockwise
   LSHIFT    = 0x04u,  //!< Shifts all the current LED brightness levels anticlockwise
-  USHIFT    = 0x08u,  //!< Shifts all the current LED brightness levels upwards
-  DSHIFT    = 0x10u,  //!< Shifts all the current LED brightness levels downwards
-  REPEAT    = 0x20u   //!< Do the instruction and repeat by (operand)-times
+//  UMOVE     = 0x04u,  //!< Moves some of the values upwards. Uses saturation logic. Doesn't roll over.
+//  DMOVE     = 0x08u,  //!< Moves some of the values downwards. Uses saturation logic. Doesn't roll over.
+  DIV       = 0x10u,  //!< Divides the the current LED brightness levels by the given number
+  USOURCE   = 0x20u,  //!< Add values to the brightness and if it overflows/underflows then it will be added to the upwards next value. If it overflows/underflows then it will do the same until it reaches the uppper or lower end.
+  DSOURCE   = 0x40u,  //!< Add values to the brightness and if it overflows/underflows then it will be added to the downwards next value. If it overflows/underflows then it will do the same until it reaches the uppper or lower end.
+  REPEAT    = 0x80u   //!< Do the instruction and repeat by (operand)-times
 } E_ANIMATION_OPCODE;
 
-//! \brief Instruction used by the animation state machine
+//! \brief Instruction used by the animation state machine -- for normal LEDs
 typedef struct
 {
   U16 u16TimingMs;                               //!< How long the machine should stay in this state
   U8  au8LEDBrightness[ LEDS_NUM ];              //!< Brightness of each LED
+  U8  u8AnimationOpcode;                         //!< Opcode (E_ANIMATION_OPCODE)
+  U8  u8AnimationOperand;                        //!< Opcode-specific operand
+} S_ANIMATION_INSTRUCTION_NORMAL;
+
+//! \brief Instruction used by the animation state machine -- for the RGB LED
+typedef struct
+{
+  U16 u16TimingMs;                               //!< How long the machine should stay in this state
   U8  au8RGBLEDBrightness[ NUM_RGBLED_COLORS ];  //!< Brightness of each color
   U8  u8AnimationOpcode;                         //!< Opcode (E_ANIMATION_OPCODE)
   U8  u8AnimationOperand;                        //!< Opcode-specific operand
-} S_ANIMATION_INSTRUCTION;
+} S_ANIMATION_INSTRUCTION_RGB;
 
 //! \brief Animation structure
 typedef struct
 {
-  U8                                  u8AnimationLength;  //!< How many instructions this animation has
-  const S_ANIMATION_INSTRUCTION CODE* psInstructions;     //!< Pointer to the instructions themselves
+  U8                                         u8AnimationLengthNormal;  //!< How many instructions this animation has for the normal LEDs
+  const S_ANIMATION_INSTRUCTION_NORMAL CODE* psInstructionsNormal;     //!< Pointer to the instructions themselves -- normal LEDs
+  U8                                         u8AnimationLengthRGB;     //!< How many instructions this animation has for the RGB LED
+  const S_ANIMATION_INSTRUCTION_RGB CODE*    psInstructionsRGB;        //!< Pointer to the instructions themselves -- RGB LED
 } S_ANIMATION;
 
 
 /***************************************< Constants >**************************************/
-//! \brief Retro animation
-CODE const S_ANIMATION_INSTRUCTION gasRetroVersion[ 8u ] = 
-  {
-  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, {15,  0,  0}, LOAD, 0u },
-  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0}, LOAD, 0u },
-  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
-  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, { 0,  0,  0}, LOAD, 0u },
-  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
-  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0}, LOAD, 0u },
-  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, {15,  0,  0}, LOAD, 0u },
-  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, { 0,  0,  0}, LOAD, 0u },
-};
-
-//! \brief "Sine" wave flasher animation
-CODE const S_ANIMATION_INSTRUCTION gasSoftFlashing[ 4u ] = 
+//! \brief Retro animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasRetroVersion[ 8u ] = 
 {
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,          0u },
-  { 50u, { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}, { 1,  0,  0}, ADD | REPEAT, 14u },
-  {100u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, {15,  0,  0}, LOAD,          0u }, 
-  { 50u, {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, {-1,  0,  0}, ADD | REPEAT, 14u },
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0, 15,  0,  0, 15}, LOAD, 0u },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, LOAD, 0u },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, LOAD, 0u },
+  {133u, { 0, 15,  0, 15, 15,  0,  0, 15,  0, 15, 15,  0}, LOAD, 0u },
+  {133u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, LOAD, 0u },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, LOAD, 0u },
+  {133u, {15,  0, 15,  0,  0, 15, 15,  0,  0, 15,  0, 15}, LOAD, 0u },
+  {133u, { 0,  0,  0, 15,  0,  0,  0,  0,  0, 15,  0,  0}, LOAD, 0u },
+};
+//! \brief Retro animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasRetroVersionRGB[ 4u ] = 
+{
+  {133u, {15,  0,  0}, LOAD, 0u },
+  {665u, { 0,  0,  0}, LOAD, 0u },
+  {133u, {15,  0,  0}, LOAD, 0u },
+  {133u, { 0,  0,  0}, LOAD, 0u },
 };
 
-//! \brief Shooting star anticlockwise animation
-CODE const S_ANIMATION_INSTRUCTION gasShootingStar[ 7u ] = 
+//--------------------------------------------------------
+//! \brief "Sine" wave flasher animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasSoftFlashing[ 4u ] = 
+{
+  {125u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,          0u },
+  {125u, { 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1}, ADD | REPEAT, 14u },
+  {125u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, LOAD,          0u }, 
+  {125u, {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, ADD | REPEAT, 14u },
+};
+//! \brief "Sine" wave flasher animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasSoftFlashingRGB[ 4u ] = 
+{
+  {125u, { 0,  0,  0}, LOAD,          0u },
+  {125u, { 1,  0,  0}, ADD | REPEAT, 14u },
+  {125u, {15,  0,  0}, LOAD,          0u }, 
+  {125u, {-1,  0,  0}, ADD | REPEAT, 14u },
+};
+
+//--------------------------------------------------------
+//! \brief "Fade ring" animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasFadeRing[ 3u ] =
+{
+  { 40u, {15,  1, 15,  1, 15,  1,  1, 15,  1, 15,  1, 15}, LOAD,          0u },
+  { 40u, {-1,  1, -1,  1, -1,  1,  1, -1,  1, -1,  1, -1}, ADD | REPEAT, 13u },
+  { 40u, { 1, -1,  1, -1,  1, -1, -1,  1, -1,  1, -1,  1}, ADD | REPEAT, 13u },
+};
+//! \brief "Fade ring" animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasFadeRingRGB[ 3u ] =
+{
+  { 40u, {15,  1,  0}, LOAD,          0u },
+  { 40u, {-1,  0,  0}, ADD | REPEAT, 13u },
+  { 40u, { 1,  0,  0}, ADD | REPEAT, 13u },
+};
+
+//--------------------------------------------------------
+//! \brief Shooting star anticlockwise animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasShootingStar[ 7u ] = 
 { 
-  {100u, { 5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,            0u },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, RSHIFT | REPEAT, 2u },
-  {100u, { 0,  0,  0,  0,  5, 10,  0,  0,  0,  0,  0,  0}, {15,  0,  0}, LOAD,            0u },
-  {100u, { 0,  0,  0,  0,  0,  5, 15,  0,  0,  0,  0,  0}, {10,  0,  0}, LOAD,            0u },
-  {100u, { 0,  0,  0,  0,  0,  0, 10, 15,  0,  0,  0,  0}, { 5,  0,  0}, LOAD,            0u },
-  {100u, { 0,  0,  0,  0,  0,  0,  5, 10, 15,  0,  0,  0}, { 0,  0,  0}, LOAD,                  0u },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, RSHIFT | REPEAT, 4u },
+  {100u, { 5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, RSHIFT | REPEAT, 2u },
+  {100u, { 0,  0,  0,  0,  5, 10,  0,  0,  0,  0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  5, 15,  0,  0,  0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0, 10, 15,  0,  0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  5, 10, 15,  0,  0,  0}, LOAD,            0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, RSHIFT | REPEAT, 4u },
+};
+//! \brief Shooting star anticlockwise animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasShootingStarRGB[ 4u ] = 
+{ 
+  {400u, { 0,  0,  0}, LOAD,            0u },
+  {100u, {15,  0,  0}, LOAD,            0u },
+  {100u, {-5,  0,  0}, ADD | REPEAT,    1u },
+  {600u, { 0,  0,  0}, LOAD,            0u },
 };
 
-//! \brief Star launch animation
-CODE const S_ANIMATION_INSTRUCTION gasStarLaunch[ 39u ] = 
+//--------------------------------------------------------
+//! \brief Star launch animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasStarLaunch[ 5u ] = 
 {
-  {400u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {200u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {200u, {10,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
-  {200u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 10}, { 0,  0,  0} },
-  {200u, {15,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, { 0,  0,  0} },
-  {200u, {15, 10,  0,  0,  0,  0,  0,  0,  0,  0,  5, 15}, { 0,  0,  0} },
-  {200u, {15, 15,  0,  0,  0,  0,  0,  0,  0,  0, 10, 15}, { 0,  0,  0} },
-  {200u, {15, 15,  5,  0,  0,  0,  0,  0,  0,  0, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 10,  0,  0,  0,  0,  0,  0,  5, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15,  0,  0,  0,  0,  0,  0, 10, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15,  5,  0,  0,  0,  0,  0, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 10,  0,  0,  0,  0,  5, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15,  0,  0,  0,  0, 10, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15,  5,  0,  0,  0, 15, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15, 10,  0,  0,  5, 15, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15, 15,  0,  0, 10, 15, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15, 15,  5,  0, 15, 15, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15, 15, 10,  5, 15, 15, 15, 15, 15}, { 0,  0,  0} },
-  {200u, {15, 15, 15, 15, 15, 15, 10, 15, 15, 15, 15, 15}, { 0,  0,  0} },
-  {400u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, {15, 15,  0} },
-  {200u, {15, 15, 15, 15, 15, 15, 10, 15, 15, 15, 15, 15}, {15, 15,  0} },
-  {200u, {15, 15, 15, 15, 15, 10,  5, 15, 15, 15, 15, 15}, {15, 15,  0} },
-  {200u, {15, 15, 15, 15, 15,  5,  0, 15, 15, 15, 15, 15}, {15, 14,  0} },
-  {200u, {15, 15, 15, 15, 15,  0,  0, 10, 15, 15, 15, 15}, {15, 13,  0} },
-  {200u, {15, 15, 15, 15, 10,  0,  0,  5, 15, 15, 15, 15}, {15, 12,  0} },
-  {200u, {15, 15, 15, 15,  5,  0,  0,  0, 15, 15, 15, 15}, {15, 11,  0} },
-  {200u, {15, 15, 15, 15,  0,  0,  0,  0, 10, 15, 15, 15}, {15, 10,  0} },
-  {200u, {15, 15, 15, 10,  0,  0,  0,  0,  5, 15, 15, 15}, {15,  9,  0} },
-  {200u, {15, 15, 15,  5,  0,  0,  0,  0,  0, 15, 15, 15}, {15,  8,  0} },
-  {200u, {15, 15, 15,  0,  0,  0,  0,  0,  0, 10, 15, 15}, {15,  7,  0} },
-  {200u, {15, 15, 10,  0,  0,  0,  0,  0,  0,  5, 15, 15}, {15,  6,  0} },
-  {200u, {15, 15,  5,  0,  0,  0,  0,  0,  0,  0, 15, 15}, {15,  5,  0} },
-  {200u, {15, 15,  0,  0,  0,  0,  0,  0,  0,  0, 10, 15}, {12,  4,  0} },
-  {200u, {15, 10,  0,  0,  0,  0,  0,  0,  0,  0,  5, 15}, { 9,  3,  0} },
-  {200u, {15,  5,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, { 6,  2,  0} },
-  {200u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 10}, { 3,  1,  0} },
-  {200u, {10,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
-  {200u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0} },
+  {400u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,              0u },
+  {200u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,              0u },
+  {200u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, USOURCE | REPEAT, 18u },
+  {200u, {15, 15, 15, 15, 15, 15, 10, 15, 15, 15, 15, 15}, LOAD,              0u },
+  {200u, { 0,  0,  0,  0,  0, -5, -5,  0,  0,  0,  0,  0}, DSOURCE | REPEAT, 16u },
 };
-
-//! \brief Generic flasher animation
-CODE const S_ANIMATION_INSTRUCTION gasGenericFlasher[ 2u ] = 
+//! \brief Star launch animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasStarLaunchRGB[ 5u ] = 
 {
-  {500u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, { 7,  7,  7}, LOAD, 0u }, 
-  {500u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {4000u, { 0,  0,  0}, LOAD,         0u},
+  { 800u, {15, 15,  0}, LOAD,         0u},
+  { 200u, { 0, -1,  0}, ADD | REPEAT, 9u},
+  { 200u, {-3, -1,  0}, ADD | REPEAT, 4u},
+  { 200u, { 0,  0,  0}, LOAD,         0u},
 };
 
-//! \brief KITT animation
-CODE const S_ANIMATION_INSTRUCTION gasKITT[ 19u ] = 
+//--------------------------------------------------------
+//! \brief Generic flasher animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasGenericFlasher[ 2u ] = 
 {
-  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,                  0u },
-  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,                  0u },
-  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD, 0u },
-  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD, 0u },
-  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD, 0u },
-  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD, 0u },
-  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD, 0u },
-  {100u, { 0,  0,  0,  0,  0,-15,-15,  0,  0,  0,  0,  0}, { 5,  0,  0}, ADD | USHIFT | REPEAT, 2u },
-  {100u, { 0,  0,  0,  0,  0,-15,-15,  0,  0,  0,  0,  0}, {-5,  0,  0}, ADD | USHIFT | REPEAT, 2u },
-  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 0,  0,  0} },
-  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0} },
-  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0} },
-  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0} },
-  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0} },
-  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0} },
-  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0} },
-  
-  /*
-  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 5,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, {10,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, {15,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, {10,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 5,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, { 0,  0,  0}, LOAD,  0u },
-  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, { 0,  0,  0}, LOAD,  0u },
-  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, { 0,  0,  0}, LOAD,  0u },
-  */
+  {500u, {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15}, LOAD, 0u }, 
+  {500u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD, 0u },
 };
-
-//! \brief Disco animation
-CODE const S_ANIMATION_INSTRUCTION gasDisco[ 12u ] = 
+//! \brief Generic flasher animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasGenericFlasherRGB[ 2u ] = 
 {
-  {40u, {  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15}, {15,  0, 15}, LOAD, 0u },
-  {40u, {  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7}, { 7,  0,  7}, LOAD, 0u },
-  {40u, {  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4}, { 4,  0,  4}, LOAD, 0u },
-  {40u, {  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2}, { 2,  0,  2}, LOAD, 0u },
-  {40u, {  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1}, { 1,  0,  1}, LOAD, 0u },
-  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
-  {40u, { 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0}, { 0, 15,  0}, LOAD, 0u },
-  {40u, {  7,  0,  7,  0,  7,  0,  7,  0,  7,  0,  7,  0}, { 0,  7,  0}, LOAD, 0u },
-  {40u, {  4,  0,  4,  0,  4,  0,  4,  0,  4,  0,  4,  0}, { 0,  4,  0}, LOAD, 0u },
-  {40u, {  2,  0,  2,  0,  2,  0,  2,  0,  2,  0,  2,  0}, { 0,  2,  0}, LOAD, 0u },
-  {40u, {  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0}, { 0,  1,  0}, LOAD, 0u },
-  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {500u, { 7,  7,  7}, LOAD, 0u }, 
+  {500u, { 0,  0,  0}, LOAD, 0u },
 };
 
-
-//! \brief All blackness, reached right before going to power down mode
-CODE const S_ANIMATION_INSTRUCTION gasBlackness[ 1u ] =
+//--------------------------------------------------------
+//! \brief KITT animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasKITT[ 22u ] = 
 {
-  {0xFFFFu, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, { 0,  0,  0}, LOAD, 0u },
+  {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, LOAD,  0u },
+  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, LOAD,  0u },
+  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, LOAD,  0u },
+  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, LOAD,  0u },
+  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, LOAD,  0u },
+  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, LOAD,  0u },
+  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, LOAD,  0u },
+  {100u, { 0,  0,  5, 10, 15, 10, 10, 15, 10,  5,  0,  0}, LOAD,  0u },
+  {100u, { 0,  5, 10, 15, 10,  5,  5, 10, 15, 10,  5,  0}, LOAD,  0u },
+  {100u, { 5, 10, 15, 10,  5,  0,  0,  5, 10, 15, 10,  5}, LOAD,  0u },
+  {100u, {10, 15, 10,  5,  0,  0,  0,  0,  5, 10, 15, 10}, LOAD,  0u },
+  {100u, {15, 10,  5,  0,  0,  0,  0,  0,  0,  5, 10, 15}, LOAD,  0u },
+  {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, LOAD,  0u },
+  {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, LOAD,  0u },
+};
+//! \brief KITT animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasKITTRGB[ 4u ] = 
+{
+  { 800u, { 0,  0,  0}, LOAD,         0u },
+  { 100u, { 5,  0,  0}, ADD | REPEAT, 3u },
+  { 100u, {-5,  0,  0}, ADD | REPEAT, 3u },
+  {1300u, { 0,  0,  0}, LOAD,         0u },
 };
 
+//--------------------------------------------------------
+//! \brief Disco animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasDisco[ 6u ] = 
+{
+  {40u, {  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15}, LOAD,         0u },
+  {40u, {  1,  2,  1,  2,  1,  2,  1,  2,  1,  2,  1,  2}, DIV | REPEAT, 3u },
+  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,         0u },
+  {40u, { 15,  0, 15,  0, 15,  0, 15,  0, 15,  0, 15,  0}, LOAD,         0u },
+  {40u, {  2,  1,  2,  1,  2,  1,  2,  1,  2,  1,  2,  1}, DIV | REPEAT, 3u },
+  {100u,{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,         0u },
+};
+//! \brief Disco animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasDiscoRGB[ 6u ] = 
+{
+  { 40u, {15,  0, 15}, LOAD,         0u },
+  { 40u, { 2,  1,  2}, DIV | REPEAT, 3u },
+  {100u, { 0,  0,  0}, LOAD,         0u },
+  { 40u, { 0, 15,  0}, LOAD,         0u },
+  { 40u, { 2,  1,  2}, DIV | REPEAT, 3u },
+  {100u, { 0,  0,  0}, LOAD,         0u },
+};
+
+//--------------------------------------------------------
+//! \brief Pseudo-random fade animation -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasPseudoRandomFade[ 15u ] = 
+{
+  { 66u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  { 66u, { 0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  1,  0,  0,  0,  0, -1,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0, -1,  0,  0,  0,  0,  0,  0,  0,  1,  0}, ADD | REPEAT, 14u },
+  { 66u, { 1,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,  0}, ADD | REPEAT, 14u },
+  { 66u, {-1,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0,  0,  0, -1,  0,  1,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  1}, ADD | REPEAT, 14u },
+  { 66u, { 0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0, -1}, ADD | REPEAT, 14u },
+  { 66u, { 0, -1,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0, -1,  0,  0,  1,  0,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0}, ADD | REPEAT, 14u },  //RGB lights up here
+  { 66u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0,  0,  1,  0,  0,  0,  0, -1,  0,  0}, ADD | REPEAT, 14u },
+  { 66u, { 0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  0}, ADD | REPEAT, 14u },
+};
+//! \brief Pseudo-random fade animation -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasPseudoRandomFadeRGB[ 4u ] = 
+{
+  { 9966u, { 0,  0,  0}, LOAD,  0u },
+  {   66u, { 1,  0,  0}, ADD | REPEAT, 14u },
+  {   66u, {-1,  0,  0}, ADD | REPEAT, 14u },
+  { 1980u, { 0,  0,  0}, LOAD,  0u },
+};
+
+//--------------------------------------------------------
+//! \brief All blackness, reached right before going to power down mode -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasBlackness[ 1u ] =
+{
+  {0xFFFFu, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD, 0u },
+};
+//! \brief All blackness, reached right before going to power down mode -- RGB LED
+CODE const S_ANIMATION_INSTRUCTION_RGB gasBlacknessRGB[ 1u ] =
+{
+  {0xFFFFu, { 0,  0,  0}, LOAD, 0u },
+};
+
+// *******************************************************
 //! \brief Table of animations
 CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] = 
 {
-  {sizeof(gasRetroVersion)/sizeof(S_ANIMATION_INSTRUCTION),        gasRetroVersion},
-  {sizeof(gasSoftFlashing)/sizeof(S_ANIMATION_INSTRUCTION),        gasSoftFlashing},
-  {sizeof(gasShootingStar)/sizeof(S_ANIMATION_INSTRUCTION),        gasShootingStar},
-  {sizeof(gasStarLaunch)/sizeof(S_ANIMATION_INSTRUCTION),          gasStarLaunch},
-  {sizeof(gasGenericFlasher)/sizeof(S_ANIMATION_INSTRUCTION),      gasGenericFlasher},
-  {sizeof(gasKITT)/sizeof(S_ANIMATION_INSTRUCTION),                gasKITT},
-  {sizeof(gasDisco)/sizeof(S_ANIMATION_INSTRUCTION),               gasDisco},
+  {sizeof(gasRetroVersion)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),     gasRetroVersion,     sizeof(gasRetroVersionRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),     gasRetroVersionRGB },
+  {sizeof(gasSoftFlashing)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),     gasSoftFlashing,     sizeof(gasSoftFlashingRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),     gasSoftFlashingRGB },
+  {sizeof(gasShootingStar)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),     gasShootingStar,     sizeof(gasShootingStarRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),     gasShootingStarRGB },
+  {sizeof(gasStarLaunch)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),       gasStarLaunch,       sizeof(gasStarLaunchRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),       gasStarLaunchRGB },
+  {sizeof(gasGenericFlasher)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),   gasGenericFlasher,   sizeof(gasGenericFlasherRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),   gasGenericFlasherRGB },
+  {sizeof(gasKITT)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),             gasKITT,             sizeof(gasKITTRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),             gasKITTRGB },
+  {sizeof(gasDisco)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),            gasDisco,            sizeof(gasDiscoRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),            gasDiscoRGB },
+  {sizeof(gasFadeRing)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),         gasFadeRing,         sizeof(gasFadeRingRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),         gasFadeRingRGB },
+  {sizeof(gasPseudoRandomFade)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL), gasPseudoRandomFade, sizeof(gasPseudoRandomFadeRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB), gasPseudoRandomFadeRGB },
   // Last animation, don't change its location
-  {sizeof(gasBlackness)/sizeof(S_ANIMATION_INSTRUCTION),           gasBlackness}
+  {sizeof(gasBlackness)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),        gasBlackness,        sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),        gasBlackness }
 };
 
 
 /***************************************< Global variables >**************************************/
-//! \brief Ms resolution timer that is synchronized between paired devices
-//! \note  Depending on the animation, its maximum value can be anything
-IDATA U16 gu16SynchronizedTimer;
-IDATA U16 gu16LastCall;       //!< The last time the main cycle was called
+IDATA U16 gu16NormalTimer;                    //!< Ms resolution timer for normal LED animation
+IDATA U16 gu16RGBTimer;                       //!< Ms resolution timer for the RGB LED animation
+IDATA U16 gu16LastCall;                       //!< The last time the main cycle was called
 // Local variables
-static IDATA U8 u8LastState = 0xFFu;          //!< Previously executed instruction index
-static IDATA U8 u8RepetitionCounter = 0u;  //!< Instruction repetition counter
+static IDATA U8 u8LastState = 0xFFu;          //!< Previously executed instruction index for normal LEDs
+static IDATA U8 u8RepetitionCounter = 0u;     //!< Instruction repetition counter for normal LEDs
+static IDATA U8 u8LastStateRGB = 0xFFu;       //!< Previously executed instruction index for RGB LED
+static IDATA U8 u8RepetitionCounterRGB = 0u;  //!< Instruction repetition counter for RGB LED
 
 
 /***************************************< Static function definitions >**************************************/
+static I8 SaturateBrightness( U8* pu8BrightnessVariable );
 
 
 /***************************************< Private functions >**************************************/
+//----------------------------------------------------------------------------
+//! \brief  Saturates the given brightness variable
+//! \param  *pu8BrightnessVariable: pointer to the variable
+//! \return How much the variable needed to change
+//! \global -
+//! \note   Changes the parameter too.
+//-----------------------------------------------------------------------------
+static I8 SaturateBrightness( U8* pu8BrightnessVariable )
+{
+  I8 i8Return = 0;
+  if( (I8)*pu8BrightnessVariable < 0 )
+  {
+    i8Return = (I8)*pu8BrightnessVariable;
+    *pu8BrightnessVariable = 0u;
+  }
+  else if( (I8)*pu8BrightnessVariable > 15u )
+  {
+    i8Return = (I8)*pu8BrightnessVariable - 15;
+    *pu8BrightnessVariable = 15u;
+  }
+  return i8Return;
+}
 
 
 /***************************************< Public functions >**************************************/
@@ -266,7 +358,8 @@ static IDATA U8 u8RepetitionCounter = 0u;  //!< Instruction repetition counter
 //-----------------------------------------------------------------------------
 void Animation_Init( void )
 {
-  gu16SynchronizedTimer = 0u;
+  gu16NormalTimer = 0u;
+  gu16RGBTimer = 0u;
   gu16LastCall = Util_GetTimerMs();
 }
 
@@ -282,15 +375,18 @@ void Animation_Cycle( void )
   U8  u8AnimationState;
   U16 u16StateTimer = 0u;
   U16 u16TimeNow = Util_GetTimerMs();
-  U8  u8Index;
+  U8  u8Index, u8InnerIndex;
+  U8  u8OpCode;
   U8  u8Temp;
+  I8  i8Change;
   
   // Check if time has elapsed since last call
   if( u16TimeNow != gu16LastCall )
   {
     // Increase the synchronized timer with the difference
     DISABLE_IT;
-    gu16SynchronizedTimer += ( u16TimeNow - gu16LastCall );
+    gu16NormalTimer += ( u16TimeNow - gu16LastCall );
+    gu16RGBTimer += ( u16TimeNow - gu16LastCall );
     ENABLE_IT;
 
     // Make sure not to overindex arrays
@@ -299,56 +395,50 @@ void Animation_Cycle( void )
       gsPersistentData.u8AnimationIndex = 0u;
     }
     
+    // --------------------------------------< For the normal LEDs
     // Calculate the state of the animation
-    for( u8AnimationState = 0u; u8AnimationState < gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLength; u8AnimationState++ )
+    for( u8AnimationState = 0u; u8AnimationState < gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLengthNormal; u8AnimationState++ )
     {
-      u16StateTimer += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u16TimingMs;
-      if( u16StateTimer > gu16SynchronizedTimer )
+      u16StateTimer += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].u16TimingMs;
+      if( u16StateTimer > gu16NormalTimer )
       {
         break;
       }
     }
-    if( u8AnimationState >= gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLength )
+    if( u8AnimationState >= gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLengthNormal )
     {
       // restart animation
       u8AnimationState = 0u;
       DISABLE_IT;
-      gu16SynchronizedTimer = 0;
+      gu16NormalTimer = 0u;
+      gu16RGBTimer = 0u;
       ENABLE_IT;
     }
     if( u8LastState != u8AnimationState )  // next instruction
     {
+      u8OpCode = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].u8AnimationOpcode;
       // Just a load instruction, nothing more
-      if( LOAD == gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+      if( LOAD == u8OpCode )
       {
-        memcpy( gau8LEDBrightness, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness, LEDS_NUM );
-        memcpy( gau8RGBLEDs, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness, NUM_RGBLED_COLORS );
+        memcpy( gau8LEDBrightness, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness, LEDS_NUM );
         u8LastState = u8AnimationState;
       }
       else  // Other opcodes -- IMPORTANT: the order of operations are fixed!
       {
         // Add operation
-        if( ADD & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        if( ADD & u8OpCode )
         {
           for( u8Index = 0u; u8Index < LEDS_NUM; u8Index++ )
           {
-            gau8LEDBrightness[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
             if( gau8LEDBrightness[ u8Index ] > 15u )  // overflow/underflow happened
             {
               gau8LEDBrightness[ u8Index ] = 0u;
             }
           }
-          for( u8Index = 0u; u8Index < NUM_RGBLED_COLORS; u8Index++ )
-          {
-            gau8RGBLEDs[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].au8RGBLEDBrightness[ u8Index ];
-            if( gau8RGBLEDs[ u8Index ] > 15u )  // overflow/underflow happened
-            {
-              gau8RGBLEDs[ u8Index ] = 0u;
-            }
-          }
         }
         // Right shift operation
-        if( RSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        if( RSHIFT & u8OpCode )
         {
           u8Temp = gau8LEDBrightness[ LEDS_NUM - 1u ];
           for( u8Index = LEDS_NUM - 1u; u8Index > 0u; u8Index-- )
@@ -358,7 +448,7 @@ void Animation_Cycle( void )
           gau8LEDBrightness[ 0u ] = u8Temp;
         }
         // Left shift operation
-        if( LSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        if( LSHIFT & u8OpCode )
         {
           u8Temp = gau8LEDBrightness[ 0u ];
           for( u8Index = 0u; u8Index < (LEDS_NUM - 1u); u8Index++ )
@@ -367,38 +457,170 @@ void Animation_Cycle( void )
           }
           gau8LEDBrightness[ LEDS_NUM - 1u ] = u8Temp;
         }
-        // Upward shift operation
-        if( USHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+/*
+        // Upward move operation
+        if( UMOVE & u8OpCode )
         {
           // Left side
-          u8Temp = gau8LEDBrightness[ RIGHT_LEDS_START - 1u ];
-          for( u8Index = RIGHT_LEDS_START - 1u; u8Index > 0u; u8Index-- )
+          for( u8Index = 0u; u8Index < (RIGHT_LEDS_START - 1u); u8Index++ )
           {
-            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index - 1u ];
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] -= i8Change;
+            for( u8InnerIndex = u8Index; u8InnerIndex < (RIGHT_LEDS_START - 1u); u8InnerIndex++ )
+            {
+              i8Change += SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex ] );
+              gau8LEDBrightness[ u8InnerIndex + 1u ] += i8Change;
+              i8Change = SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex + 1u ] );
+            }
           }
-          gau8LEDBrightness[ 0u ] = u8Temp;
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ RIGHT_LEDS_START - 1u ];
+          gau8LEDBrightness[ RIGHT_LEDS_START - 1u ] -= i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ RIGHT_LEDS_START - 1u ] );
           // Right side
-          u8Temp = gau8LEDBrightness[ RIGHT_LEDS_START ];
+          for( u8Index = LEDS_NUM - 1u; u8Index > RIGHT_LEDS_START; u8Index-- )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            if( (I8)gau8LEDBrightness[ u8Index ] - i8Change < 0u )  // saturation downwards
+            {
+              gau8LEDBrightness[ u8Index - 1u ] += gau8LEDBrightness[ u8Index ];
+            }
+            else  // no saturation
+            {
+              gau8LEDBrightness[ u8Index - 1u ] += i8Change;
+            }
+            gau8LEDBrightness[ u8Index ] -= i8Change;
+            SaturateBrightness( &gau8LEDBrightness[ u8Index ] );
+            SaturateBrightness( &gau8LEDBrightness[ u8Index - 1u ] );  // saturate the next LED too
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ RIGHT_LEDS_START ];
+          gau8LEDBrightness[ RIGHT_LEDS_START ] -= i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ RIGHT_LEDS_START ] );
+        }
+        // Downward move operation
+        if( DMOVE & u8OpCode )
+        {
+          //TODO: this works for positive move values only!
+          // Left side
+          for( u8Index = (RIGHT_LEDS_START - 1u); u8Index > 0u ; u8Index-- )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            if( (I8)gau8LEDBrightness[ u8Index ] - i8Change < 0u )  // saturation downwards
+            {
+              gau8LEDBrightness[ u8Index - 1u ] += gau8LEDBrightness[ u8Index ];
+            }
+            else  // no saturation
+            {
+              gau8LEDBrightness[ u8Index - 1u ] += i8Change;
+            }
+            gau8LEDBrightness[ u8Index ] -= i8Change;
+            SaturateBrightness( &gau8LEDBrightness[ u8Index ] );
+            SaturateBrightness( &gau8LEDBrightness[ u8Index - 1u ] );  // saturate the next LED too
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ 0u ];
+          gau8LEDBrightness[ 0u ] -= i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ 0u ] );
+          // Right side
           for( u8Index = RIGHT_LEDS_START; u8Index < (LEDS_NUM - 1u); u8Index++ )
           {
-            gau8LEDBrightness[ u8Index ] = gau8LEDBrightness[ u8Index + 1u ];
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            if( (I8)gau8LEDBrightness[ u8Index ] - i8Change < 0u )  // saturation downwards
+            {
+              gau8LEDBrightness[ u8Index + 1u ] += gau8LEDBrightness[ u8Index ];
+            }
+            else  // no saturation
+            {
+              gau8LEDBrightness[ u8Index + 1u ] += i8Change;
+            }
+            gau8LEDBrightness[ u8Index ] -= i8Change;
+            SaturateBrightness( &gau8LEDBrightness[ u8Index ] );
+            SaturateBrightness( &gau8LEDBrightness[ u8Index + 1u ] );  // saturate the next LED too
           }
-          gau8LEDBrightness[ LEDS_NUM - 1u ] = u8Temp;
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ LEDS_NUM - 1u ];
+          gau8LEDBrightness[ LEDS_NUM - 1u ] -= i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ LEDS_NUM - 1u ] );
         }
-        // Downward shift operation
-        if( DSHIFT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+*/
+        // Upward source instruction
+        if( USOURCE & u8OpCode )
         {
-        #warning TODO
+          // Left side
+          for( u8Index = 0u; u8Index < (RIGHT_LEDS_START - 1u); u8Index++ )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] += i8Change;
+            for( u8InnerIndex = u8Index; u8InnerIndex < (RIGHT_LEDS_START - 1u); u8InnerIndex++ )
+            {
+              gau8LEDBrightness[ u8InnerIndex + 1u ] += SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex ] );
+            }
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ RIGHT_LEDS_START - 1u ];
+          gau8LEDBrightness[ RIGHT_LEDS_START - 1u ] += i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ RIGHT_LEDS_START - 1u ] );
+          // Right side
+          for( u8Index = LEDS_NUM - 1u; u8Index > RIGHT_LEDS_START; u8Index-- )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] += i8Change;
+            for( u8InnerIndex = LEDS_NUM - 1u; u8InnerIndex > RIGHT_LEDS_START; u8InnerIndex-- )
+            {
+              gau8LEDBrightness[ u8InnerIndex - 1u ] += SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex ] );
+            }
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ RIGHT_LEDS_START ];
+          gau8LEDBrightness[ RIGHT_LEDS_START ] += i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ RIGHT_LEDS_START ] );
+        }
+        // Downward source instruction
+        if( DSOURCE & u8OpCode )
+        {
+          // Left side
+          for( u8Index = (RIGHT_LEDS_START - 1u); u8Index > 0u; u8Index-- )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] += i8Change;
+            for( u8InnerIndex = u8Index; u8InnerIndex > 0u; u8InnerIndex-- )
+            {
+              gau8LEDBrightness[ u8InnerIndex - 1u ] += SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex ] );
+            }
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ 0u ];
+          gau8LEDBrightness[ 0u ] += i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ 0u ] );
+          // Right side
+          for( u8Index = RIGHT_LEDS_START; u8Index < (LEDS_NUM - 1u); u8Index++ )
+          {
+            i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            gau8LEDBrightness[ u8Index ] += i8Change;
+            for( u8InnerIndex = RIGHT_LEDS_START; u8InnerIndex < (LEDS_NUM - 1u); u8InnerIndex++ )
+            {
+              gau8LEDBrightness[ u8InnerIndex + 1u ] += SaturateBrightness( &gau8LEDBrightness[ u8InnerIndex ] );
+            }
+          }
+          i8Change = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ LEDS_NUM - 1u ];
+          gau8LEDBrightness[ LEDS_NUM - 1u ] += i8Change;
+          SaturateBrightness( &gau8LEDBrightness[ LEDS_NUM - 1u ] );
+        }
+        // Divide instruction
+        if( DIV & u8OpCode )
+        {
+          for( u8Index = 0u; u8Index < LEDS_NUM; u8Index++ )
+          {
+            u8Temp = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].au8LEDBrightness[ u8Index ];
+            if( u8Temp != 0u )
+            {
+              gau8LEDBrightness[ u8Index ] /= u8Temp;
+            }
+          }
         }
         // Repeat instruction
-        if( REPEAT & gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOpcode )
+        if( REPEAT & u8OpCode )
         {
           // If we're here the first time
           if( 0u == u8RepetitionCounter )
           {
-            u8RepetitionCounter = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u8AnimationOperand;
+            u8RepetitionCounter = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].u8AnimationOperand;
             // Step back in time
-            gu16SynchronizedTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u16TimingMs;
+            gu16NormalTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].u16TimingMs;
           }
           else  // We're already repeating...
           {
@@ -406,7 +628,7 @@ void Animation_Cycle( void )
             if( 0u != u8RepetitionCounter )
             {
               // Step back in time
-              gu16SynchronizedTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructions[ u8AnimationState ].u16TimingMs;
+              gu16NormalTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsNormal[ u8AnimationState ].u16TimingMs;
             }
             else  // No more repeating
             {
@@ -420,6 +642,122 @@ void Animation_Cycle( void )
         }
       }
     }
+    
+    // --------------------------------------< For the RGB LED
+    // Calculate the state of the animation
+    u16StateTimer = 0u;
+    for( u8AnimationState = 0u; u8AnimationState < gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLengthRGB; u8AnimationState++ )
+    {
+      u16StateTimer += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].u16TimingMs;
+      if( u16StateTimer > gu16RGBTimer )
+      {
+        break;
+      }
+    }
+/*
+    if( u8AnimationState >= gasAnimations[ gsPersistentData.u8AnimationIndex ].u8AnimationLengthRGB )
+    {
+      // restart animation
+      u8AnimationState = 0u;
+      DISABLE_IT;
+      gu16SynchronizedTimer = 0;
+      ENABLE_IT;
+    }
+*/
+    if( u8LastStateRGB != u8AnimationState )  // next instruction
+    {
+      u8OpCode = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].u8AnimationOpcode;
+      // Just a load instruction, nothing more
+      if( LOAD == u8OpCode )
+      {
+        memcpy( gau8RGBLEDs, (void*)gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].au8RGBLEDBrightness, NUM_RGBLED_COLORS );
+        u8LastStateRGB = u8AnimationState;
+      }
+      else  // Other opcodes -- IMPORTANT: the order of operations are fixed!
+      {
+        // Add operation
+        if( ADD & u8OpCode )
+        {
+          for( u8Index = 0u; u8Index < NUM_RGBLED_COLORS; u8Index++ )
+          {
+            gau8RGBLEDs[ u8Index ] += gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].au8RGBLEDBrightness[ u8Index ];
+            if( gau8RGBLEDs[ u8Index ] > 15u )  // overflow/underflow happened
+            {
+              gau8RGBLEDs[ u8Index ] = 0u;
+            }
+          }
+        }
+        // Right shift operation
+        if( RSHIFT & u8OpCode )
+        {
+          // Not implemented
+        }
+        // Left shift operation
+        if( LSHIFT & u8OpCode )
+        {
+          // Not implemented
+        }
+/*
+        // Upward move operation
+        if( UMOVE & u8OpCode )
+        {
+          // Not implemented
+        }
+        // Downward move operation
+        if( DMOVE & u8OpCode )
+        {
+          // Not implemented
+        }
+*/
+        if( USOURCE & u8OpCode )
+        {
+          // Not implemented
+        }
+        if( DSOURCE & u8OpCode )
+        {
+          // Not implemented
+        }
+        if( DIV & u8OpCode )
+        {
+          for( u8Index = 0u; u8Index < NUM_RGBLED_COLORS; u8Index++ )
+          {
+            u8Temp = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].au8RGBLEDBrightness[ u8Index ];
+            if( u8Temp != 0u )
+            {
+              gau8RGBLEDs[ u8Index ] /= u8Temp;
+            }
+          }
+        }
+        // Repeat instruction
+        if( REPEAT & u8OpCode )
+        {
+          // If we're here the first time
+          if( 0u == u8RepetitionCounterRGB )
+          {
+            u8RepetitionCounterRGB = gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].u8AnimationOperand;
+            // Step back in time
+            gu16RGBTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].u16TimingMs;
+          }
+          else  // We're already repeating...
+          {
+            u8RepetitionCounterRGB--;
+            if( 0u != u8RepetitionCounterRGB )
+            {
+              // Step back in time
+              gu16RGBTimer -= gasAnimations[ gsPersistentData.u8AnimationIndex ].psInstructionsRGB[ u8AnimationState ].u16TimingMs;
+            }
+            else  // No more repeating
+            {
+             u8LastStateRGB = u8AnimationState;
+            }
+          }
+        }
+        else  // if there's no repeat opcode
+        {
+          u8LastStateRGB = u8AnimationState;  // save that this operation is finished
+        }
+      }
+    }    
     // Store the timestamp
     gu16LastCall = u16TimeNow;
   }
@@ -438,10 +776,13 @@ void Animation_Set( U8 u8AnimationIndex )
   {
     gsPersistentData.u8AnimationIndex = u8AnimationIndex;
     DISABLE_IT;
-    gu16SynchronizedTimer = 0u;
+    gu16NormalTimer = 0u;
+    gu16RGBTimer = 0u;
     ENABLE_IT;
     u8LastState = 0xFFu;
     u8RepetitionCounter = 0u;
+    u8LastStateRGB = 0xFFu;
+    u8RepetitionCounterRGB = 0u;
   }
 }
 
