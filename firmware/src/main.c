@@ -79,6 +79,8 @@ static void Timer0Init( void )
 //-----------------------------------------------------------------------------
 void main( void )
 {
+  U32  u32UptimeCounter = 0u;
+  U16  u16LastCall = 0u;
   U8   u8CurrentAnimation = 0u;
   BOOL bPressedLong = FALSE;
 
@@ -122,6 +124,36 @@ void main( void )
   // Main loop
   while( TRUE )
   {
+    // Increment uptime counter
+    if( Util_GetTimerMs() < u16LastCall )
+    {
+      u32UptimeCounter += (U32)( 65535u - u16LastCall + Util_GetTimerMs() + 1u );
+    }
+    else
+    {
+      u32UptimeCounter += (U32)( Util_GetTimerMs() - u16LastCall );
+    }
+    u16LastCall = Util_GetTimerMs();
+    if( u32UptimeCounter >= 18000000u )  // turn off after 5 hours = 5*60*60*1000 msec
+    {
+      // Go to power-down sleep
+      EA = 0;   // Disable all interrupts
+      TR0 = 0;  // Stop Timer 0
+      ET0 = 0;  // Disable Timer 0 interrupt
+      EX0 = 1;  // Enable INT0 interrupt
+      P1 = 0xFFu;  // Set all pins to 1
+      P3 = 0xFFu;
+      P5 = 0x3Fu;
+      P1M0 = 0x00u;  // All pins must be bidirectional
+      P1M1 = 0x00u;
+      P3M0 = 0x00u;
+      P3M1 = 0x00u;
+      P5M0 = 0x00u;
+      P5M0 = 0x00u;
+      EA = 1;  // Enable all interrupts
+      PCON |= 0x02u;  // PD bit
+    }
+    
     // Debounce button in a nonblocking way
     switch( geButtonState )
     {
