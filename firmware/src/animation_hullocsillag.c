@@ -95,13 +95,13 @@ CODE const S_ANIMATION_INSTRUCTION_NORMAL gasSoftFlashing[ 4u ] =
 //! \brief "Fade ring" animation -- normal LEDs
 CODE const S_ANIMATION_INSTRUCTION_NORMAL gasFadeRing[ 3u ] =
 {
-  { 40u, {15,  1, 15,  1, 15,  1,  1, 15,  1, 15,  1, 15}, LOAD,          0u },
-  { 40u, {-1,  1, -1,  1, -1,  1,  1, -1,  1, -1,  1, -1}, ADD | REPEAT, 13u },
-  { 40u, { 1, -1,  1, -1,  1, -1, -1,  1, -1,  1, -1,  1}, ADD | REPEAT, 13u },
+  { 40u, {15,  1, 15,  1, 15,  1, 15,  1, 15,  1, 15,  1}, LOAD,          0u },
+  { 40u, {-1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1}, ADD | REPEAT, 13u },
+  { 40u, { 1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1}, ADD | REPEAT, 13u },
 };
 
 //--------------------------------------------------------
-//! \brief Shooting star anticlockwise animation -- normal LEDs
+//! \brief Shooting star clockwise animation -- normal LEDs
 CODE const S_ANIMATION_INSTRUCTION_NORMAL gasShootingStar[ 4u ] = 
 { 
   {100u, { 5, 10, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,            0u },
@@ -120,8 +120,9 @@ CODE const S_ANIMATION_INSTRUCTION_NORMAL gasGenericFlasher[ 2u ] =
 
 //--------------------------------------------------------
 //! \brief KITT animation -- normal LEDs
-CODE const S_ANIMATION_INSTRUCTION_NORMAL gasKITT[ 22u ] = 
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasKITT[ 11u ] = 
 {
+/*
   {200u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
   {100u, { 5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  5}, LOAD,  0u },
   {100u, {10,  5,  0,  0,  0,  0,  0,  0,  0,  0,  5, 10}, LOAD,  0u },
@@ -133,6 +134,7 @@ CODE const S_ANIMATION_INSTRUCTION_NORMAL gasKITT[ 22u ] =
   {100u, { 0,  0,  0,  5, 10, 15, 15, 10,  5,  0,  0,  0}, LOAD,  0u },
   {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, LOAD,  0u },
   {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, LOAD,  0u },
+*/
   {100u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
   {100u, { 0,  0,  0,  0,  0,  5,  5,  0,  0,  0,  0,  0}, LOAD,  0u },
   {100u, { 0,  0,  0,  0,  5, 10, 10,  5,  0,  0,  0,  0}, LOAD,  0u },
@@ -180,6 +182,60 @@ CODE const S_ANIMATION_INSTRUCTION_NORMAL gasPseudoRandomFade[ 15u ] =
 };
 
 //--------------------------------------------------------
+//! \brief CrissCross -- normal LEDs 
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasCrissCross[ 12u ] = 
+{
+        //0    1   2   3   4   5   6   7   8   9  10  11
+  {350u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0, 15,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0, 15,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0, 15,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0, 15,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0, 15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, LOAD,  0u },
+};
+
+//--------------------------------------------------------
+//! \brief Pingpong -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasPingpong[ 4u ] = 
+{
+  {350u, {15,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, RSHIFT | REPEAT, 10u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, LSHIFT | REPEAT, 10u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15}, LOAD,  0u },
+};
+
+//--------------------------------------------------------
+//! \brief Ice -- normal LEDs
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasIce[ 10u ] = 
+{
+        //0    1   2   3   4   5   6   7   8   9  10  11
+  {900u, { 0,  0,  0, 15,  15, 15, 15, 15,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0, 15,  15, 15, 15, 15, 15,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0, 15,  15, 15, 15, 15,  9, 15,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0, 15,  15, 15, 15, 15,  1,  9, 15,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0, 15,  15, 15, 15, 15,  0,  1,  9,  0}, LOAD,  0u },
+  {350u, { 0,  0, 15, 15,  15, 15, 15, 15,  0,  0,  1,  0}, LOAD,  0u },
+  {350u, { 0, 15,  9, 15,  15, 15, 15, 15,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, {15,  9,  1, 15,  15, 15, 15, 15,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 9,  1,  0, 15,  15, 15, 15, 15,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 1,  0,  0, 15,  15, 15, 15, 15,  0,  0,  0,  0}, LOAD,  0u },
+};
+
+//--------------------------------------------------------
+//! \brief YingYang -- Ying-yang átellenes oldalon indulva köröz + Narancs és kék felvált amikor odaér
+CODE const S_ANIMATION_INSTRUCTION_NORMAL gasYingYang[ 2u ] = 
+{
+  {350u, {15,  0,  0,  0,  0,  0, 15,  0,  0,  0,  0,  0}, LOAD,  0u },
+  {350u, { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0}, RSHIFT | REPEAT, 4u },
+};
+
+//--------------------------------------------------------
 //! \brief All blackness, reached right before going to power down mode -- normal LEDs
 CODE const S_ANIMATION_INSTRUCTION_NORMAL gasBlackness[ 1u ] =
 {
@@ -202,6 +258,12 @@ CODE const S_ANIMATION gasAnimations[ NUM_ANIMATIONS ] =
   {sizeof(gasDisco)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),            gasDisco,            sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
   {sizeof(gasFadeRing)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),         gasFadeRing,         sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
   {sizeof(gasPseudoRandomFade)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL), gasPseudoRandomFade, sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
+
+  {sizeof(gasCrissCross)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),       gasCrissCross,       sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
+  {sizeof(gasPingpong)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),         gasPingpong,         sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
+  {sizeof(gasIce)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),              gasIce,              sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
+  {sizeof(gasYingYang)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),         gasYingYang,         sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness },
+  
   // Last animation, don't change its location
   {sizeof(gasBlackness)/sizeof(S_ANIMATION_INSTRUCTION_NORMAL),        gasBlackness,        sizeof(gasBlacknessRGB)/sizeof(S_ANIMATION_INSTRUCTION_RGB),  gasBlackness }
 };

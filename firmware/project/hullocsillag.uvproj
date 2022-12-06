@@ -382,9 +382,9 @@
               <FilePath>..\src\animation_hullocsillag.c</FilePath>
             </File>
             <File>
-              <FileName>animation.h</FileName>
+              <FileName>animation_hullocsillag.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\src\animation.h</FilePath>
+              <FilePath>..\src\animation_hullocsillag.h</FilePath>
             </File>
             <File>
               <FileName>led_hullocsillag.c</FileName>
@@ -395,11 +395,6 @@
               <FileName>led.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\src\led.h</FilePath>
-            </File>
-            <File>
-              <FileName>main.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\src\main.c</FilePath>
             </File>
             <File>
               <FileName>persist.c</FileName>
@@ -415,6 +410,11 @@
               <FileName>platform.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\src\platform.h</FilePath>
+            </File>
+            <File>
+              <FileName>main_hullocsillag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\main_hullocsillag.c</FilePath>
             </File>
             <File>
               <FileName>STARTUP.A51</FileName>
