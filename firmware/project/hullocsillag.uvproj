@@ -457,14 +457,14 @@
               <FilePath>..\src\rgbled.h</FilePath>
             </File>
             <File>
-              <FileName>batterylevel.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\src\batterylevel.c</FilePath>
-            </File>
-            <File>
               <FileName>batterylevel.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\src\batterylevel.h</FilePath>
+            </File>
+            <File>
+              <FileName>batterylevel_hullocsillag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\batterylevel_hullocsillag.c</FilePath>
             </File>
           </Files>
         </Group>
