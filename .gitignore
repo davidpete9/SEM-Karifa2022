@@ -28,3 +28,5 @@ fp-info-cache
 /panel-backups
 /firmware/project/Listings
 /firmware/project/Objects
+/fw_py32/EWARM/PY32F002-STK
+/fw_py32/EWARM/settings
