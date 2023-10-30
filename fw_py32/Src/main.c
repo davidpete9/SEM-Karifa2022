@@ -51,6 +51,7 @@ static U16 gu16ButtonPressTimer;  //!< Timer for the button debouncing state mac
 
 /***************************************< Static function definitions >**************************************/
 static void APP_SystemClockConfig( void );
+static void PowerDown( void );
 
 
 /***************************************< Private functions >**************************************/
@@ -83,6 +84,42 @@ static void APP_SystemClockConfig( void )
   
   /* 更新系统时钟全局变量SystemCoreClock(也可以通过调用SystemCoreClockUpdate函数更新) */
   LL_SetSystemCoreClock(24000000);
+}
+
+//----------------------------------------------------------------------------
+//! \brief  Enter deep sleep mode with peripherials set to low-current mode
+//! \param  -
+//! \return -
+//-----------------------------------------------------------------------------
+static void PowerDown( void )
+{
+  // Gradually disable stuff and enter deep sleep
+  LL_APB1_GRP1_EnableClock( LL_APB1_GRP1_PERIPH_PWR );
+  DISABLE_IT;
+  NVIC_DisableIRQ( TIM1_BRK_UP_TRG_COM_IRQn );
+  LL_TIM_DisableCounter( TIM1 );
+  LL_TIM_DisableAllOutputs( TIM1 );
+  LL_APB1_GRP2_DisableClock( LL_APB1_GRP2_PERIPH_TIM1 );
+  LL_GPIO_DeInit( GPIOA );
+  LL_GPIO_DeInit( GPIOB );
+  LL_GPIO_DeInit( GPIOF );
+//  LL_GPIO_SetPinPull( GPIOA, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
+//  LL_GPIO_SetPinPull( GPIOB, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
+//  LL_GPIO_SetPinPull( GPIOF, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
+#warning "Enable EXTI on button line!"
+  LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOA );
+  LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOB );
+  LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOF );
+  LL_PWR_EnableLowPowerRunMode();
+  LL_PWR_SetRegulVoltageScaling( LL_PWR_REGU_VOLTAGE_SCALE2 );
+  LL_PWR_SetSramRetentionVolt( LL_PWR_SRAM_RETENTION_VOLT_0p9 );
+  LL_PWR_SetWakeUpFlashDelay( LL_PWR_WAKEUP_FLASH_DELAY_0US );
+  LL_PWR_SetWakeUpLPToVRReadyTime( LL_PWR_WAKEUP_LP_TO_VR_READY_5US );
+  LL_LPM_DisableEventOnPend();
+  LL_LPM_EnableDeepSleep();
+  SET_BIT( SCB->SCR, SCB_SCR_SLEEPDEEP_Msk );
+  __WFI();
+  NVIC_SystemReset();  // This should not be reached...
 }
 
 
@@ -143,7 +180,7 @@ void main( void )
   // Main loop
   while( TRUE )
   {
-#warning "FIXME: delete"
+#warning "ˇˇFIXME: delete"
     if( Util_GetTimerMs() > 10000u )
     {
       // shut down after 10 sec
@@ -158,6 +195,7 @@ void main( void )
       }
     }
     
+    
     // Increment uptime counter
     if( Util_GetTimerMs() < u16LastCall )
     {
@@ -171,24 +209,7 @@ void main( void )
     if( u32UptimeCounter >= 18000000u )  // turn off after 5 hours = 5*60*60*1000 msec
     {
       // Go to power-down sleep
-#warning "Port to PY32F002!"
-      /*
-      EA = 0;   // Disable all interrupts
-      TR0 = 0;  // Stop Timer 0
-      ET0 = 0;  // Disable Timer 0 interrupt
-      EX0 = 1;  // Enable INT0 interrupt
-      P1 = 0xFFu;  // Set all pins to 1
-      P3 = 0xFFu;
-      P5 = 0x3Fu;
-      P1M0 = 0x00u;  // All pins must be bidirectional
-      P1M1 = 0x00u;
-      P3M0 = 0x00u;
-      P3M1 = 0x00u;
-      P5M0 = 0x00u;
-      P5M0 = 0x00u;
-      EA = 1;  // Enable all interrupts
-      PCON |= 0x02u;  // PD bit
-      */
+      PowerDown();
     }
     
     // Debounce button in a nonblocking way
@@ -253,33 +274,7 @@ void main( void )
             
             if( TRUE == bPressedLong )
             {
-              // Gradually disable stuff and enter deep sleep
-              LL_APB1_GRP1_EnableClock( LL_APB1_GRP1_PERIPH_PWR );
-              DISABLE_IT;
-              NVIC_DisableIRQ( TIM1_BRK_UP_TRG_COM_IRQn );
-              LL_TIM_DisableCounter( TIM1 );
-              LL_TIM_DisableAllOutputs( TIM1 );
-              LL_APB1_GRP2_DisableClock( LL_APB1_GRP2_PERIPH_TIM1 );
-              LL_GPIO_DeInit( GPIOA );
-              LL_GPIO_DeInit( GPIOB );
-              LL_GPIO_DeInit( GPIOF );
-//              LL_GPIO_SetPinPull( GPIOA, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
-//              LL_GPIO_SetPinPull( GPIOB, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
-//              LL_GPIO_SetPinPull( GPIOF, LL_GPIO_PIN_ALL, LL_GPIO_PULL_DOWN );
-#warning "Enable EXTI on button line!"
-              LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOA );
-              LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOB );
-              LL_IOP_GRP1_DisableClock( LL_IOP_GRP1_PERIPH_GPIOF );
-              LL_PWR_EnableLowPowerRunMode();
-              LL_PWR_SetRegulVoltageScaling( LL_PWR_REGU_VOLTAGE_SCALE2 );
-              LL_PWR_SetSramRetentionVolt( LL_PWR_SRAM_RETENTION_VOLT_0p9 );
-              LL_PWR_SetWakeUpFlashDelay( LL_PWR_WAKEUP_FLASH_DELAY_0US );
-              LL_PWR_SetWakeUpLPToVRReadyTime( LL_PWR_WAKEUP_LP_TO_VR_READY_5US );
-              LL_LPM_DisableEventOnPend();
-              LL_LPM_EnableDeepSleep();
-              SET_BIT( SCB->SCR, SCB_SCR_SLEEPDEEP_Msk );
-              __WFI();
-              NVIC_SystemReset();  // This should not be reached...
+              PowerDown();
               bPressedLong = FALSE;
             }
           }
