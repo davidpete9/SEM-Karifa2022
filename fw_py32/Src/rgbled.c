@@ -19,10 +19,9 @@
 
 
 /***************************************< Definitions >**************************************/
-#define COLOR_LEVELS   (16u)  //!< Number of brightness levels per color
-#define PIN_R          (P54)  //!< GPIO pin for red LED
-#define PIN_G          (P55)  //!< GPIO pin for green LED
-#define PIN_B          (P16)  //!< GPIO pin for blue LED
+#define COLOR_LEVELS       (16u)  //!< Number of brightness levels per color
+#define PWM_BRIGHT         (36u)  //!< PWM duty cycle for bright color -- 3 us pulse
+#define PWM_DARK            (0u)  //!< PWM duty cycle for darkness
 
 
 /***************************************< Types >**************************************/
@@ -77,18 +76,18 @@ void RGBLED_Init( void )
   LL_GPIO_Init( GPIOA, &TIM1CH1MapInit );
   
   // Configure PWM channels
-  TIM_OC_Initstruct.OCMode        = LL_TIM_OCMODE_PWM2;
+  TIM_OC_Initstruct.OCMode        = LL_TIM_OCMODE_PWM1;
   TIM_OC_Initstruct.OCState       = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_Initstruct.OCPolarity    = LL_TIM_OCPOLARITY_HIGH;
-  TIM_OC_Initstruct.OCIdleState   = LL_TIM_OCIDLESTATE_LOW;
+  TIM_OC_Initstruct.OCPolarity    = LL_TIM_OCPOLARITY_LOW;
+  TIM_OC_Initstruct.OCIdleState   = LL_TIM_OCIDLESTATE_HIGH;
   // Set CH2
-  TIM_OC_Initstruct.CompareValue  = 1;
+  TIM_OC_Initstruct.CompareValue  = PWM_DARK;
   LL_TIM_OC_Init( TIM1, LL_TIM_CHANNEL_CH2, &TIM_OC_Initstruct );
   // Set CH3
-  TIM_OC_Initstruct.CompareValue  = 1;
+  TIM_OC_Initstruct.CompareValue  = PWM_DARK;
   LL_TIM_OC_Init( TIM1, LL_TIM_CHANNEL_CH3, &TIM_OC_Initstruct );
   // Set CH4
-  TIM_OC_Initstruct.CompareValue  = 1;
+  TIM_OC_Initstruct.CompareValue  = PWM_DARK;
   LL_TIM_OC_Init( TIM1, LL_TIM_CHANNEL_CH4, &TIM_OC_Initstruct );
   
   // Initialize TIM1 base
@@ -121,36 +120,36 @@ void RGBLED_Interrupt( void )
   if( gau8RGBLEDs[ 0 ] > u8Cnt )
   {
     // Pulse for 1 usec
-    LL_TIM_OC_SetCompareCH2( TIM1, 12u );
+    LL_TIM_OC_SetCompareCH2( TIM1, PWM_BRIGHT );
   }
   else
   {
     // No pulse
-    LL_TIM_OC_SetCompareCH2( TIM1, 0 );
+    LL_TIM_OC_SetCompareCH2( TIM1, PWM_DARK );
   }
   
   // Green
   if( gau8RGBLEDs[ 1 ] > u8Cnt )
   {
     // Pulse for 1 usec
-    LL_TIM_OC_SetCompareCH3( TIM1, 12u );
+    LL_TIM_OC_SetCompareCH3( TIM1, PWM_BRIGHT );
   }
   else
   {
     // No pulse
-    LL_TIM_OC_SetCompareCH3( TIM1, 0 );
+    LL_TIM_OC_SetCompareCH3( TIM1, PWM_DARK );
   }
   
   // Blue
   if( gau8RGBLEDs[ 2 ] > u8Cnt )
   {
     // Pulse for 1 usec
-    LL_TIM_OC_SetCompareCH4( TIM1, 12u );
+    LL_TIM_OC_SetCompareCH4( TIM1, PWM_BRIGHT );
   }
   else
   {
     // No pulse
-    LL_TIM_OC_SetCompareCH4( TIM1, 0 );
+    LL_TIM_OC_SetCompareCH4( TIM1, PWM_DARK );
   }
   u8Cnt++;
   if( COLOR_LEVELS <= u8Cnt )

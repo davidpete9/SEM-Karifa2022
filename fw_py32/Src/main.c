@@ -170,7 +170,7 @@ void main( void )
   // This is necessary, to avoid changing animation on power on
   while( 0 == BUTTON_PIN )
   {
-    gu16ButtonPressTimer = Util_GetTimerMs() + 100u;  // 1 ms wait
+    gu16ButtonPressTimer = Util_GetTimerMs() + 100u;  // 100 ms wait
     while( gu16ButtonPressTimer > Util_GetTimerMs() );
   }
 
@@ -181,10 +181,10 @@ void main( void )
   while( TRUE )
   {
 #warning "ˇˇFIXME: delete"
-    if( Util_GetTimerMs() > 10000u )
+    static U16 u16LastPushMs = 5000u;
+    if( Util_GetTimerMs() > u16LastPushMs )
     {
-      // shut down after 10 sec
-      if( Util_GetTimerMs() < 12500u )
+      if( Util_GetTimerMs() < u16LastPushMs + 100u )
       {
         u8ButtonPin = 0;
       }
@@ -192,9 +192,9 @@ void main( void )
       {
         // release
         u8ButtonPin = 1;
+        u16LastPushMs = Util_GetTimerMs() + 5000;
       }
     }
-    
     
     // Increment uptime counter
     if( Util_GetTimerMs() < u16LastCall )
